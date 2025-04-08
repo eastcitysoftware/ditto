@@ -2,14 +2,12 @@ package render
 
 import (
 	"html/template"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestRenderPage(t *testing.T) {
-	testLayout := `{{define "base.tmpl"}}<html>{{block "content" .}}{{end}}</html>{{end}}`
+	testLayout := `<html>{{block "content" .}}{{end}}</html>`
 
 	testTemplate := `{{/*
 		{
@@ -25,10 +23,9 @@ func TestRenderPage(t *testing.T) {
 {{end}}{{end}}`
 	pageReader := strings.NewReader(testTemplate)
 	pageWriter := &strings.Builder{}
-	layout := "base.tmpl"
-	layouts := template.Must(template.New("").Parse(testLayout))
+	layout := template.Must(template.New("test.tmpl").Parse(testLayout))
 
-	err := renderPage(pageReader, pageWriter, layout, layouts)
+	err := RenderPage(pageReader, pageWriter, "test.tmpl", layout)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -108,46 +105,5 @@ func TestExtractJsonFrontmatterEmpty(t *testing.T) {
 	}
 	if remainingContent != pageContent {
 		t.Errorf("expected remaining content to be unchanged, got %s", remainingContent)
-	}
-}
-
-func TestRemoveFileRecursive(t *testing.T) {
-	tmpDir := t.TempDir()
-	testFiles := []string{
-		"test1.txt",
-		"/test2/test.txt",
-		"/test3/test.txt",
-		"/test4/test.txt"}
-
-	for _, file := range testFiles {
-		err := os.MkdirAll(filepath.Join(tmpDir, file), os.ModePerm)
-		if err != nil {
-			t.Fatalf("failed to create test file %s: %v", file, err)
-		}
-		os.Create(filepath.Join(tmpDir, file))
-		if err != nil {
-			t.Fatalf("failed to create test file %s: %v", file, err)
-		}
-	}
-
-	// Check if the files are create
-	filesAfterCreate, err := os.ReadDir(tmpDir)
-	if len(filesAfterCreate) != len(testFiles) {
-		t.Fatalf("expected %d files after create, got %d", len(testFiles), len(filesAfterCreate))
-	}
-	if err != nil {
-		t.Fatalf("failed to read directory after create %s: %v", tmpDir, err)
-	}
-
-	// recursively remove test.txt
-	removeFileRecursive(tmpDir, "test.txt")
-
-	// Check if the files are removed
-	filesAfterRemove, err := os.ReadDir(tmpDir)
-	if err != nil {
-		t.Fatalf("failed to read directory after remove %s: %v", tmpDir, err)
-	}
-	if len(filesAfterRemove) != 1 {
-		t.Fatalf("expected 1 file after delete, got %d", len(filesAfterRemove))
 	}
 }

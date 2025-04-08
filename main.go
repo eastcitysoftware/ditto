@@ -1,21 +1,23 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
-	"path/filepath"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/eastcitysoftware/ditto/internal/render"
-	// "github.com/eastcitysoftware/ditto/internal/server"
 	"github.com/eastcitysoftware/ditto/internal/website"
 )
 
 func main() {
 	// parse command line flags
 	root := flag.String("root", "", "root directory of the project")
-	// port := flag.Int("port", 8080, "port to run the server on")
+	port := flag.Int("port", 8080, "port to run the server on")
 	flag.Parse()
 
 	// show usage if no arguments are provided
@@ -32,52 +34,56 @@ func main() {
 		}
 	}
 
-	config, err := newPageConfig(*root)
+	// create the website config
+	config, err := website.NewConfig(*root)
 	if err != nil {
 		log.Fatalf("failed to create page config: %v", err)
 	}
 
-	website, err := website.LoadWebsite(config)
+	// load the website from disk
+	site, err := website.Load(config)
 	if err != nil {
 		log.Fatalf("failed to load website: %v", err)
 	}
-	log.Println("loaded website with", len(website.Pages), "pages")
+	log.Println("loaded website with", len(site.Pages), "pages")
 
-	log.Println("rendering pages to", website.OutputDir)
-	err = render.RenderWebsite(*website)
+	// render the website to disk
+	log.Println("rendering pages to", site.OutputDir)
+	err = website.Render(site)
 	if err != nil {
 		log.Fatalf("rendering pages failed with %v", err)
 	}
 
-	// server := newDevelopmentServer(*port, config.outputDir)
-	// log.Println("starting server on ", server.addr)
-	// server.start()
+	// start the development server
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	addr := fmt.Sprintf("localhost:%d", *port)
+	srv := newDevelopmentServer(addr, config.OutputDir)
+	log.Println("starting server on", addr)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+	log.Println("server started successfully")
+
+	<-done
+	log.Println("server stopped")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		// extra handling here
+		cancel()
+	}()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("server Shutdown Failed:%+v", err)
+	}
+	log.Print("server Exited Properly")
 }
 
-func newPageConfig(root string) (*website.WebsiteConfig, error) {
-	// establish and check directories
-	outputDir := filepath.Join(root, website.DefaultOutputDir)
-	_, err := os.Stat(outputDir)
-	if err != nil {
-		return nil, fmt.Errorf("public directory does not exist")
-	}
-
-	pagesPath := filepath.Join(root, website.DefaultPagesDir)
-	_, err = os.Stat(pagesPath)
-	if err != nil {
-		return nil, fmt.Errorf("pages directory does not exist")
-	}
-
-	layoutsDir := filepath.Join(pagesPath, website.DefaultLayoutsDir)
-	_, err = os.Stat(layoutsDir)
-	if err != nil {
-		return nil, fmt.Errorf("layouts directory does not exist")
-	}
-
-	config := &website.WebsiteConfig{
-		PagesDir:   pagesPath,
-		BaseLayout: website.DefaultBaseLayout,
-		OutputDir:  outputDir,
-	}
-	return config, nil
+func newDevelopmentServer(addr string, dir string) *http.Server {
+	return &http.Server{
+		Addr:    addr,
+		Handler: http.FileServer(http.Dir(dir))}
 }
