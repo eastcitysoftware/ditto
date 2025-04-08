@@ -5,5 +5,5 @@
 [![build](https://github.com/eastcitysoftware/ditto/actions/workflows/build.yml/badge.svg)](https://github.com/eastcitysoftware/ditto/actions/workflows/build.yml)
 ![License](https://img.shields.io/github/license/eastcitysoftware/ditto)
 
-Build websites with Go.
+Build websites with Go templates.
 </div>
