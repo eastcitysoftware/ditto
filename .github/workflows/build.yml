@@ -1,0 +1,26 @@
+name: build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test website
+        run: go test ./internal/website/
+
+      - name: Test render
+        run: go test ./internal/render/

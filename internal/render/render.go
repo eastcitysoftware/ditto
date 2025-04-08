@@ -2,7 +2,9 @@ package render
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,9 +12,14 @@ import (
 	"github.com/eastcitysoftware/ditto/internal/website"
 )
 
+const (
+	openFrontmatterTag      = "{{/*"
+	closeopenFrontmatterTag = "*/}}"
+)
+
 func RenderWebsite(website website.Website) error {
 	// clean output directory
-	err := cleanOutputDir(website.OutputDir)
+	err := removeFileRecursive(website.BaseLayout, "index.html")
 	if err != nil {
 		return err
 	}
@@ -22,36 +29,46 @@ func RenderWebsite(website website.Website) error {
 
 	// render pages
 	for _, page := range website.Pages {
-		err := renderPage(page, layouts)
+		pageReader, err := os.Open(page.InputPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to open page file %s: %w", page.InputPath, err)
+		}
+
+		if err := os.MkdirAll(filepath.Dir(page.OutputPath), os.ModePerm); err != nil {
+			return fmt.Errorf("failed to create output directory %s: %w", page.OutputPath, err)
+		}
+
+		outputFile, err := os.Create(page.OutputPath)
+		if err != nil {
+			return fmt.Errorf("failed to create output file %s: %w", page.OutputPath, err)
+		}
+		defer outputFile.Close()
+
+		err = renderPage(pageReader, outputFile, website.BaseLayout, layouts)
+		if err != nil {
+			return fmt.Errorf("failed to render page %s: %w", page.InputPath, err)
 		}
 	}
 
 	return nil
 }
 
-func renderPage(page website.Page, layouts *template.Template) error {
-	pageContentBytes, err := os.ReadFile(page.InputPath)
+func renderPage(rd io.Reader, wr io.Writer, layout string, layouts *template.Template) error {
+	// consume reader and get page content
+	pageContentBytes, err := io.ReadAll(rd)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read page content: %w", err)
 	}
 
 	// extract json frontmatter from page file
 	pageContent, pageData, err := extractJsonFrontmatter(string(pageContentBytes))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to extract json frontmatter: %w", err)
 	}
 
 	// render template using layout
 	pageTemplate := template.Must(template.Must(layouts.Clone()).Parse(pageContent))
-	out, err := prepareOutFile(page.OutputPath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	pageTemplate.ExecuteTemplate(out, "default.tmpl", pageData)
+	pageTemplate.ExecuteTemplate(wr, layout, pageData)
 	return nil
 }
 
@@ -82,25 +99,16 @@ func extractJsonFrontmatter(pageContent string) (string, map[string]any, error) 
 	return pageContent, nil, nil
 }
 
-func cleanOutputDir(outputDir string) error {
-	err := removeFileRecursive(outputDir, "index.html")
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func removeFileRecursive(removeDir string, file string) error {
 	return filepath.Walk(removeDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
-			return nil
-		}
 
 		if strings.HasSuffix(path, file) {
 			// if the parent directory of the file is not "pages"
+			// remove the file and its parent directory
+			// otherwise remove the file only
 			if dir := filepath.Dir(path); dir == removeDir {
 				err := os.Remove(path)
 				if err != nil {
@@ -116,12 +124,4 @@ func removeFileRecursive(removeDir string, file string) error {
 
 		return nil
 	})
-}
-
-func prepareOutFile(outFile string) (*os.File, error) {
-	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
-		return nil, err
-	}
-
-	return os.Create(outFile)
 }

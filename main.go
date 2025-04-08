@@ -56,19 +56,19 @@ func main() {
 
 func newPageConfig(root string) (*website.WebsiteConfig, error) {
 	// establish and check directories
-	outputDir := filepath.Join(root, "public")
+	outputDir := filepath.Join(root, website.DefaultOutputDir)
 	_, err := os.Stat(outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("public directory does not exist")
 	}
 
-	pagesPath := filepath.Join(root, "pages")
+	pagesPath := filepath.Join(root, website.DefaultPagesDir)
 	_, err = os.Stat(pagesPath)
 	if err != nil {
 		return nil, fmt.Errorf("pages directory does not exist")
 	}
 
-	layoutsDir := filepath.Join(pagesPath, "layouts")
+	layoutsDir := filepath.Join(pagesPath, website.DefaultLayoutsDir)
 	_, err = os.Stat(layoutsDir)
 	if err != nil {
 		return nil, fmt.Errorf("layouts directory does not exist")
@@ -76,7 +76,7 @@ func newPageConfig(root string) (*website.WebsiteConfig, error) {
 
 	config := &website.WebsiteConfig{
 		PagesDir:   pagesPath,
-		LayoutsDir: layoutsDir,
+		BaseLayout: website.DefaultBaseLayout,
 		OutputDir:  outputDir,
 	}
 	return config, nil

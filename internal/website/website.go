@@ -1,39 +1,49 @@
 package website
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
+const (
+	TmplExtension     = ".tmpl"
+	DefaultPagesDir   = "pages"
+	DefaultLayoutsDir = "layouts"
+	DefaultOutputDir  = "public"
+	DefaultBaseLayout = "base.tmpl"
+)
+
 type WebsiteConfig struct {
 	PagesDir   string
-	LayoutsDir string
+	BaseLayout string
 	OutputDir  string
 }
 
 type Website struct {
-	OutputDir string
-	Layouts   []string
-	Pages     []Page
+	OutputDir  string
+	BaseLayout string
+	Layouts    []string
+	Pages      []Page
 }
 
 type Page struct {
 	Name       string
-	Layout     string
 	InputPath  string
 	OutputPath string
 }
 
 func LoadWebsite(config *WebsiteConfig) (*Website, error) {
 	// get layout files
-	layoutFiles, err := getFilesRecursive(config.LayoutsDir, []string{})
+	layoutsDir := filepath.Join(config.PagesDir, "layouts")
+	layoutFiles, err := getFilesRecursive(layoutsDir, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// get page files
-	pageFiles, err := getFilesRecursive(config.PagesDir, []string{"layouts"})
+	pageFiles, err := getFilesRecursive(config.PagesDir, []string{layoutsDir})
 	if err != nil {
 		return nil, err
 	}
@@ -47,17 +57,20 @@ func LoadWebsite(config *WebsiteConfig) (*Website, error) {
 			return nil, err
 		}
 
+		// Normalize pageName to ensure it works correctly with filepath.Join
+		normalizedPageName := filepath.FromSlash(pageName)
+
 		pages = append(pages, Page{
-			Name:       pageName,
-			Layout:     getLayoutName(pageFile, layoutFiles),
+			Name:       normalizedPageName,
 			InputPath:  pageFile,
-			OutputPath: filepath.Join(config.OutputDir, pageName)})
+			OutputPath: filepath.Join(config.OutputDir, normalizedPageName)})
 	}
 
 	website := &Website{
-		OutputDir: config.OutputDir,
-		Layouts:   layoutFiles,
-		Pages:     pages}
+		OutputDir:  config.OutputDir,
+		BaseLayout: config.BaseLayout,
+		Layouts:    layoutFiles,
+		Pages:      pages}
 
 	return website, nil
 }
@@ -65,57 +78,61 @@ func LoadWebsite(config *WebsiteConfig) (*Website, error) {
 func getPageName(page string, pagesPath string) (string, error) {
 	// strip .tmpl extension and add .html extension
 	rel, err := filepath.Rel(pagesPath, page)
-
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to determine page name for %s: %w", page, err)
 	}
 
-	rel = strings.Replace(rel, filepath.Ext(rel), "", 1)
-	if filepath.Base(rel) != "index" {
-		rel = filepath.Join(rel, "index")
+	base := strings.TrimSuffix(rel, "."+filepath.Ext(rel))
+	if base == "index" {
+		base = base + ".html"
+	} else {
+		base = filepath.Join(base, "index.html")
 	}
-	return rel + ".html", nil
+
+	return filepath.ToSlash(base), nil
 }
 
-func getLayoutName(page string, layouts []string) string {
-	// if layouts contains a template with the same name as the page
-	// directory, use that template
-	layoutName := "default.tmpl"
-	if pageDir := filepath.Base(filepath.Dir(page)); pageDir != "pages" {
-		for _, layoutFile := range layouts {
-			if strings.HasPrefix(filepath.Base(layoutFile), pageDir) {
-				layoutName = pageDir + ".tmpl"
-			}
-		}
-	}
-	return layoutName
-}
+// func getLayoutName(page string, layouts []string) string {
+// 	// if layouts contains a template with the same name as the page
+// 	// directory, use that template
+// 	layoutName := "default.tmpl"
+// 	if pageDir := filepath.Base(filepath.Dir(page)); pageDir != "pages" {
+// 		for _, layoutFile := range layouts {
+// 			if strings.HasPrefix(filepath.Base(layoutFile), pageDir) {
+// 				layoutName = pageDir + ".tmpl"
+// 			}
+// 		}
+// 	}
+// 	return layoutName
+// }
 
 func getFilesRecursive(dir string, skipDirs []string) ([]string, error) {
 	var fileNames []string
+	skipMap := make(map[string]bool)
+	for _, skipDir := range skipDirs {
+		skipMap[skipDir] = true
+	}
 
 	err := filepath.WalkDir(dir, func(file string, d os.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk files in '%s': %w", dir, err)
 		}
 
 		// skip directories
 		if d.IsDir() {
+			// skip files if path starts with any of the skipDirs
+			if skipMap[file] {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
-		// skip files if path starts with dir
-		skipFile := false
-		for _, skipDir := range skipDirs {
-			if strings.HasPrefix(file, filepath.Join(dir, skipDir)) {
-				skipFile = true
-				break
-			}
+		// skip files that do not have the .tmpl extension
+		if filepath.Ext(file) != TmplExtension {
+			return nil
 		}
 
-		if !skipFile {
-			fileNames = append(fileNames, file)
-		}
+		fileNames = append(fileNames, filepath.ToSlash(file))
 
 		return nil
 	})
