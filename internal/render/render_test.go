@@ -25,7 +25,7 @@ func TestRenderPage(t *testing.T) {
 	pageWriter := &strings.Builder{}
 	layout := template.Must(template.New("test.tmpl").Parse(testLayout))
 
-	err := RenderPage(pageReader, pageWriter, "test.tmpl", layout)
+	err := RenderNamedTemplate(pageReader, pageWriter, "test.tmpl", layout)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

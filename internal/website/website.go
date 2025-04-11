@@ -37,40 +37,51 @@ type Page struct {
 	OutputPath string
 }
 
-func Render(website *Website) error {
-	// clean output directory
-	err := removeFileRecursive(website.OutputDir, "index.html")
-	if err != nil {
-		return err
+func Render(website *Website, fileToRender string) error {
+	if fileToRender == "" {
+		// clean output directory
+		err := removeFileRecursive(website.OutputDir, "index.html")
+		if err != nil {
+			return err
+		}
 	}
 
 	// render pages
 	for _, page := range website.Pages {
+		if fileToRender != "" && fileToRender != page.InputPath {
+			continue
+		}
+
 		if website.Layouts[page.Layout] == nil {
 			return fmt.Errorf("layout %s not found for page %s", page.Layout, page.InputPath)
 		}
 
-		pageReader, err := os.Open(page.InputPath)
-		if err != nil {
-			return fmt.Errorf("failed to open page file %s: %w", page.InputPath, err)
-		}
-
-		if err := os.MkdirAll(filepath.Dir(page.OutputPath), os.ModePerm); err != nil {
-			return fmt.Errorf("failed to create output directory %s: %w", page.OutputPath, err)
-		}
-
-		outputFile, err := os.Create(page.OutputPath)
-		if err != nil {
-			return fmt.Errorf("failed to create output file %s: %w", page.OutputPath, err)
-		}
-		defer outputFile.Close()
-
-		err = render.RenderPage(pageReader, outputFile, page.Layout, website.Layouts[page.Layout])
-		if err != nil {
-			return fmt.Errorf("failed to render page %s: %w", page.InputPath, err)
-		}
+		renderPage(page, website.Layouts[page.Layout])
 	}
 
+	return nil
+}
+
+func renderPage(page Page, layout *template.Template) error {
+	pageReader, err := os.Open(page.InputPath)
+	if err != nil {
+		return fmt.Errorf("failed to open page file %s: %w", page.InputPath, err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(page.OutputPath), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", page.OutputPath, err)
+	}
+
+	outputFile, err := os.Create(page.OutputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file %s: %w", page.OutputPath, err)
+	}
+	defer outputFile.Close()
+
+	err = render.RenderNamedTemplate(pageReader, outputFile, page.Layout, layout)
+	if err != nil {
+		return fmt.Errorf("failed to render page %s: %w", page.InputPath, err)
+	}
 	return nil
 }
 

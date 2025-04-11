@@ -13,7 +13,7 @@ const (
 	closeopenFrontmatterTag = "*/}}"
 )
 
-func RenderPage(rd io.Reader, wr io.Writer, layout string, layoutTemplate *template.Template) error {
+func RenderNamedTemplate(rd io.Reader, wr io.Writer, layout string, layoutTemplate *template.Template) error {
 	// consume reader and get page content
 	pageContentBytes, err := io.ReadAll(rd)
 	if err != nil {

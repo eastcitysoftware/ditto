@@ -1,16 +1,12 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
+	"github.com/eastcitysoftware/ditto/internal/server"
+	"github.com/eastcitysoftware/ditto/internal/watcher"
 	"github.com/eastcitysoftware/ditto/internal/website"
 )
 
@@ -49,41 +45,27 @@ func main() {
 
 	// render the website to disk
 	log.Println("rendering pages to", site.OutputDir)
-	err = website.Render(site)
+	err = website.Render(site, "")
 	if err != nil {
 		log.Fatalf("rendering pages failed with %v", err)
 	}
 
+	log.Println("watching for changes in", config.PagesDir)
+	go watcher.WatchDirectory(
+		config.PagesDir,
+		[]string{website.TmplExtension},
+		func(fileInfo *watcher.FileInfo) error {
+			log.Printf("File changed: %s", fileInfo.Path)
+			website.Render(site, fileInfo.Path)
+			return nil
+		})
+
 	// start the development server
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
-	addr := fmt.Sprintf("localhost:%d", *port)
-	srv := newDevelopmentServer(addr, config.OutputDir)
-	log.Println("starting server on", addr)
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
-		}
-	}()
-	log.Println("server started successfully")
-
-	<-done
-	log.Println("server stopped")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer func() {
-		// extra handling here
-		cancel()
-	}()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("server Shutdown Failed:%+v", err)
+	log.Println("starting development server on port", *port)
+	err = server.StartDevelopmentServer(*port, config.OutputDir)
+	if err != nil {
+		log.Fatalf("failed to start server: %v", err)
+	} else {
+		log.Print("gracefully stopped the server")
 	}
-	log.Print("server Exited Properly")
-}
-
-func newDevelopmentServer(addr string, dir string) *http.Server {
-	return &http.Server{
-		Addr:    addr,
-		Handler: http.FileServer(http.Dir(dir))}
 }
