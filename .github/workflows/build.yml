@@ -21,3 +21,6 @@ jobs:
 
       - name: Test render
         run: go test ./internal/render/
+
+      - name: Test watcher
+        run: go test ./internal/watcher/
