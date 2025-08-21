@@ -8,19 +8,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet-version: ['9.0.x']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v2
 
-      - name: Setup golang
-        uses: actions/setup-go@v4
+      - name: Setup .NET Core SDK ${{ matrix.dotnet-version }}
+        uses: actions/setup-dotnet@v3
         with:
-          go-version: 1.24.1
+          dotnet-version: ${{ matrix.dotnet-version }}
 
-      - name: Test website
-        run: go test ./internal/website/
+      - name: Install solution dependencies
+        run: |
+          dotnet restore Ditto.sln --force-evaluate --no-http-cache --force
 
-      - name: Test render
-        run: go test ./internal/render/
-
-      - name: Test watcher
-        run: go test ./internal/watcher/
+      - name: Test Core
+        run: |
+          dotnet build src/Ditto/src -c Release
+          dotnet test src/Ditto/test -c Release
