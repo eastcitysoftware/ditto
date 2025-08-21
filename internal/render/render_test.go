@@ -63,7 +63,7 @@ func TestExtractJsonFrontmatterNewLines(t *testing.T) {
 	{
 		"title": "Test Page",
 		"description": "This is a test page",
-		"tags": ["test", "example"]
+		"date": "2023-10-01"
 	}
 */}}
 {{define "content"}}{{end}}`
@@ -83,6 +83,9 @@ func TestExtractJsonFrontmatterNewLines(t *testing.T) {
 	}
 	if extractedData["description"] != expectedDescription {
 		t.Errorf("expected description %s, got %s", expectedDescription, extractedData["description"])
+	}
+	if extractedData["date"] != "2023-10-01" {
+		t.Errorf("expected date %s, got %s", "2023-10-01", extractedData["date"])
 	}
 }
 
