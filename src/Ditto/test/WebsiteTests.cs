@@ -15,7 +15,8 @@ public sealed class WebsiteGeneratorTests {
             pageParser: new PageParser(Shared.SiteConfig),
             pageWriter: new PageWriter(layouts, partials));
 
-        await generator.Generate(Shared.BasePath, Shared.OutputPath);
+        var result = await generator.Generate(Shared.BasePath, Shared.OutputPath);
+        Assert.True(result.IsOk);
 
         Assert.True(Directory.Exists(Shared.OutputPath));
 

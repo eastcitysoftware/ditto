@@ -16,7 +16,7 @@ public sealed class PageFileLoader(string basePath, string outputPath) : IPageFi
         foreach (var filePath in Directory.GetFiles(basePath, "*.html", SearchOption.AllDirectories)) {
             var relativeFilePath = Path.GetRelativePath(basePath, filePath);
 
-            // skip files in the layouts directory
+            // skip files in the layouts and partials directory
             if (relativeFilePath.StartsWith(Website.LayoutsDirectory, StringComparison.OrdinalIgnoreCase)
                 || relativeFilePath.StartsWith(Website.PartialsDirectory, StringComparison.OrdinalIgnoreCase)) {
                 continue;

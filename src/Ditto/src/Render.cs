@@ -83,7 +83,6 @@ public sealed class PageWriter(Layouts layouts, Partials partials) : IPageWriter
     }
 }
 
-
 public sealed class Layouts() {
     private readonly Dictionary<string, Template> _layouts = [];
 
@@ -107,14 +106,21 @@ public sealed class LayoutLoader(string basePath) : ILayoutLoader {
         var layouts = new Dictionary<string, Template>();
         var layoutPath = Path.Combine(basePath, Website.LayoutsDirectory);
 
+        var layoutFiles = new HashSet<string>();
         if (Directory.Exists(layoutPath)) {
             foreach (var filePath in Directory.GetFiles(layoutPath, "*.html", SearchOption.TopDirectoryOnly)) {
-                var layoutName = Path.GetFileNameWithoutExtension(filePath);
-                var layoutContent = await File.ReadAllTextAsync(filePath);
-                var template = Template.Parse(layoutContent);
-                layouts.Add(layoutName, template);
+                layoutFiles.Add(filePath);
             }
         }
+
+        var layoutTasks = layoutFiles.Select(async filePath => {
+            var layoutName = Path.GetFileNameWithoutExtension(filePath);
+            var layoutContent = await File.ReadAllTextAsync(filePath);
+            var template = Template.Parse(layoutContent);
+            layouts.Add(layoutName, template);
+        });
+
+        await Task.WhenAll(layoutTasks);
 
         return new Layouts(layouts);
     }

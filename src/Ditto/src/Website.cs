@@ -1,3 +1,5 @@
+using Danom;
+
 namespace Ditto;
 
 public sealed class Website {
@@ -9,20 +11,20 @@ public sealed class Website {
 }
 
 public interface IWebsiteGenerator {
-    Task Generate(string sourcePath, string outputPath);
+    Task<Result<Unit, ResultErrors>> Generate(string sourcePath, string outputPath);
 }
 
 public sealed class WebsiteGenerator(
     IPageFileLoader pageFileLoader,
     IPageParser pageParser,
     IPageWriter pageWriter) : IWebsiteGenerator {
-    public async Task Generate(string sourcePath, string outputPath) {
+    public async Task<Result<Unit, ResultErrors>> Generate(string sourcePath, string outputPath) {
         if (!Directory.Exists(sourcePath)) {
-            throw new DirectoryNotFoundException($"Source path '{sourcePath}' does not exist.");
+            return Result.Error($"Source path '{sourcePath}' does not exist.");
         }
 
         if (PathUtil.IsSystemPath(outputPath)) {
-            throw new InvalidOperationException("Output path cannot be a system directory.");
+            return Result.Error("Output path cannot be a system directory.");
         }
 
         if (!Directory.Exists(outputPath)) {
@@ -32,13 +34,13 @@ public sealed class WebsiteGenerator(
         var siteConfigPath = Path.Combine(sourcePath, "website.toml");
 
         if (!File.Exists(siteConfigPath)) {
-            throw new FileNotFoundException($"Site configuration file '{siteConfigPath}' not found.");
+            return Result.Error($"Site configuration file '{siteConfigPath}' not found.");
         }
 
         var pageFiles = pageFileLoader.LoadFiles();
 
         if (pageFiles.Count == 0) {
-            throw new InvalidOperationException($"No page files found in the source directory '{sourcePath}'.");
+            return Result.Error($"No page files found in the source directory '{sourcePath}'.");
         }
 
         var pageTasks = pageFiles.Select(async pageFile => {
@@ -61,5 +63,6 @@ public sealed class WebsiteGenerator(
         });
 
         await Task.WhenAll(pageRenderTasks);
+        return Result.Ok();
     }
 }

@@ -9,14 +9,18 @@ public sealed class SiteConfigTests {
             description = 'This is an example site.'
             title_separator = '{SiteConfig.DefaultTitleSeparator}'
         """;
+
         using var reader = new StringReader(toml);
         var parser = new SiteConfigParser();
         var config = await parser.Parse(reader);
-        Assert.NotNull(config);
-        Assert.Equal("https://example.com", config.BaseUrl);
-        Assert.Equal("Example Site", config.Title);
-        Assert.Equal("This is an example site.", config.Description);
-        Assert.Equal(SiteConfig.DefaultTitleSeparator, config.TitleSeparator);
+        Assert.True(config.IsOk);
+
+        if (config.TryGet(out var siteConfig)) {
+            Assert.Equal("https://example.com", siteConfig.BaseUrl);
+            Assert.Equal("Example Site", siteConfig.Title);
+            Assert.Equal("This is an example site.", siteConfig.Description);
+            Assert.Equal(SiteConfig.DefaultTitleSeparator, siteConfig.TitleSeparator);
+        }
     }
 
 
@@ -26,10 +30,11 @@ public sealed class SiteConfigTests {
         var toml = @"
             title = 'Example Site'
         ";
+
         using var reader = new StringReader(toml);
         var parser = new SiteConfigParser();
         var config = await parser.Parse(reader);
-        Assert.Null(config);
+        Assert.True(config.IsError);
     }
 }
 
@@ -38,17 +43,20 @@ public sealed class SiteConfigLoaderTests {
     public async Task Load_ReturnsSiteConfig_WhenFileExists() {
         var loader = new SiteConfigLoader(Shared.BasePath);
         var config = await loader.Load();
-        Assert.NotNull(config);
-        Assert.Equal("https://example.com", config.BaseUrl);
-        Assert.Equal("Example Site", config.Title);
-        Assert.Equal("This is an example site.", config.Description);
-        Assert.Equal(SiteConfig.DefaultTitleSeparator, config.TitleSeparator);
+        Assert.True(config.IsOk);
+
+        if (config.TryGet(out var siteConfig)) {
+            Assert.Equal("https://example.com", siteConfig.BaseUrl);
+            Assert.Equal("Example Site", siteConfig.Title);
+            Assert.Equal("This is an example site.", siteConfig.Description);
+            Assert.Equal(SiteConfig.DefaultTitleSeparator, siteConfig.TitleSeparator);
+        }
     }
 
     [Fact]
     public async Task Load_ReturnsNull_WhenFileDoesNotExist() {
         var loader = new SiteConfigLoader("nonexistent.toml");
         var config = await loader.Load();
-        Assert.Null(config);
+        Assert.True(config.IsError);
     }
 }
