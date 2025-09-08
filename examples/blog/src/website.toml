@@ -1,0 +1,3 @@
+base_url = 'http://site.local'
+title = 'Ditto Blog'
+description = 'A blog about Ditto, a static site generator.'
