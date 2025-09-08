@@ -5,14 +5,12 @@
 [![build](https://github.com/eastcitysoftware/ditto/actions/workflows/build.yml/badge.svg)](https://github.com/eastcitysoftware/ditto/actions/workflows/build.yml)
 ![License](https://img.shields.io/github/license/eastcitysoftware/ditto)
 
-Build websites with [TOML](https://github.com/prozolic/CsToml) & [Mustache](https://github.com/StubbleOrg/Stubble) templates.
+Build websites with [Scriban](https://github.com/scriban/scriban) & [TOML](https://github.com/prozolic/CsToml).
 </div>
 
 ---
 
-Ditto is a static website generator that uses TOML for configuration and Mustache for templating. It provides a direct, data-driven approach to building websites. Mustache templates allow you to create dynamic content with ease, while TOML configuration files keep your settings organized and readable.
-
-Because life is too short for complex website setups.
+Ditto is a static website generator that uses TOML for configuration and Scriban for templating/scripting. It provides a localized, data-driven approach to building websites.
 
 ---
 
