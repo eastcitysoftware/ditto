@@ -1,51 +1,65 @@
-using Tomlyn;
-using Tomlyn.Model;
+using System.Text;
 
 namespace Ditto;
 
-public sealed record Page(
+public record PageInfo(
+    string Path,
+    string Url,
     string Title,
     string Description,
-    SiteConfig Site,
-    IDictionary<string, object> Metadata,
-    string Template,
-    string Layout = Website.DefaultLayoutName);
+    string[] Tags,
+    IDictionary<string, object> Data);
+
+public sealed record Page(
+    string Path,
+    string Url,
+    string Title,
+    string Description,
+    string[] Tags,
+    IDictionary<string, object> Data,
+    View View) : PageInfo(Path, Url, Title, Description, Tags, Data);
 
 public interface IPageParser {
-    Task<Page> Parse(TextReader input);
+    Task<Page> Parse(TextReader input, PageFile pageFile);
 }
 
-public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
-    public async Task<Page> Parse(TextReader input) {
+public sealed class PageParser(IModelValuesParser modelValuesParser, SiteConfig siteConfig) : IPageParser {
+    public async Task<Page> Parse(TextReader input, PageFile pageFile) {
         var line = await input.ReadLineAsync();
 
-        TomlTable? frontMatter = default;
+        ModelValues? frontMatter = default;
         string? template;
 
         if (line is not null && line.StartsWith("---")) {
             frontMatter = await ExtractFrontMatter(input);
-            template = input.ReadToEnd();
+            template = await input.ReadToEndAsync();
         }
         else {
-            template = string.Concat(line, Environment.NewLine, input.ReadToEnd());
+            template = string.Concat(line, Environment.NewLine, await input.ReadToEndAsync());
         }
 
-        var title =
-            frontMatter?.GetString("title") is string titleValue && !string.IsNullOrWhiteSpace(titleValue)
-                ? string.Concat(titleValue, siteConfig.TitleSeparator, siteConfig.Title)
-                : siteConfig.Title;
-
         return new(
-            Title: title,
+            Path: pageFile.Path,
+            Url: UrlHelper.Combine(siteConfig.BaseUrl, pageFile.Path),
+            Title: GetTitle(frontMatter),
             Description: frontMatter?.GetString("description") ?? siteConfig.Description,
-            Site: siteConfig,
-            Metadata: frontMatter ?? [],
-            Template: template,
-            Layout: frontMatter?.GetString("layout") ?? Website.DefaultLayoutName);
+            Tags: frontMatter?.GetStringArray("tags") ?? [],
+            Data: frontMatter?.AsDictionary() ?? new Dictionary<string, object>(),
+            View: new(pageFile.PageName, template, pageFile.ViewType, GetLayoutName(frontMatter)));
     }
 
-    private static async Task<TomlTable?> ExtractFrontMatter(TextReader input) {
-        var frontMatterStr = new StringWriter();
+    private static string GetLayoutName(ModelValues? frontMatter) =>
+        frontMatter?.GetString("layout") is string layoutValue && !string.IsNullOrWhiteSpace(layoutValue)
+            ? layoutValue
+            : Website.DefaultLayoutName;
+
+    private string GetTitle(ModelValues? frontMatter) =>
+        frontMatter?.GetString("title") is string titleValue && !string.IsNullOrWhiteSpace(titleValue)
+            ? string.Concat(titleValue, siteConfig.TitleSeparator, siteConfig.Title)
+            : siteConfig.Title;
+
+    private async Task<ModelValues?> ExtractFrontMatter(TextReader input) {
+        using var frontMatterStr = new StringWriter();
         string? line;
         while ((line = await input.ReadLineAsync()) is not null) {
             if (line.StartsWith("---")) {
@@ -55,7 +69,21 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
             await frontMatterStr.WriteLineAsync(line);
         }
 
-        var frontMatterBlock = frontMatterStr.ToString();
-        return Toml.ToModel(frontMatterBlock);
+        using var ms = new MemoryStream(Encoding.UTF8.GetBytes(frontMatterStr.ToString()));
+
+        return await modelValuesParser.Parse(ms);
+    }
+}
+
+internal static class UrlHelper {
+    internal static string Combine(string baseUrl, string relativePath) {
+        if (string.IsNullOrEmpty(baseUrl)) return relativePath;
+        if (string.IsNullOrEmpty(relativePath)) return baseUrl;
+
+        return string.Concat(
+            baseUrl.TrimEnd('/'),
+            "/",
+            relativePath.Trim('/'),
+            "/");
     }
 }

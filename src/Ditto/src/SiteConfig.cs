@@ -1,5 +1,4 @@
 using Danom;
-using Tomlyn;
 
 namespace Ditto;
 
@@ -7,23 +6,26 @@ public sealed record SiteConfig(
     string BaseUrl,
     string Title,
     string Description,
-    string TitleSeparator = SiteConfig.DefaultTitleSeparator) {
-    public const string DefaultTitleSeparator = " - ";
+    string TitleSeparator = Website.DefaultTitleSeparator) {
 }
 
 public interface ISiteConfigParser {
-    Task<Result<SiteConfig, ResultErrors>> Parse(TextReader input);
+    Task<Result<SiteConfig, ResultErrors>> Parse(Stream input);
 }
 
-public sealed class SiteConfigParser : ISiteConfigParser {
-    public async Task<Result<SiteConfig, ResultErrors>> Parse(TextReader input) {
-        var toml = Toml.ToModel(await input.ReadToEndAsync());
+public sealed class SiteConfigParser(IModelValuesParser modelValuesParser) : ISiteConfigParser {
+    public async Task<Result<SiteConfig, ResultErrors>> Parse(Stream input) {
+        var toml = await modelValuesParser.Parse(input);
         var baseUrl = toml?.GetString("base_url");
         var title = toml?.GetString("title");
         var description = toml?.GetString("description");
 
         if (string.IsNullOrWhiteSpace(baseUrl)) {
             return Result<SiteConfig>.Error("Site configuration is missing required field: base_url.");
+        }
+
+        if (!Uri.TryCreate(baseUrl, new(), out var verifiedBaseUrl)) {
+            return Result<SiteConfig>.Error("Site configuration field 'base_url' is not a valid absolute URL.");
         }
 
         if (string.IsNullOrWhiteSpace(title)) {
@@ -35,10 +37,10 @@ public sealed class SiteConfigParser : ISiteConfigParser {
         }
 
         return Result<SiteConfig>.Ok(new(
-             BaseUrl: baseUrl,
+             BaseUrl: verifiedBaseUrl.AbsoluteUri,
              Title: title,
              Description: description,
-             TitleSeparator: toml?.GetString("title_separator") ?? SiteConfig.DefaultTitleSeparator));
+             TitleSeparator: toml?.GetString("title_separator") ?? Website.DefaultTitleSeparator));
     }
 }
 
@@ -46,9 +48,7 @@ public interface ISiteConfigLoader {
     Task<Result<SiteConfig, ResultErrors>> Load();
 }
 
-public sealed class SiteConfigLoader(string basePath) : ISiteConfigLoader {
-    private readonly SiteConfigParser _parser = new();
-
+public sealed class SiteConfigLoader(string basePath, ISiteConfigParser SiteConfigParser) : ISiteConfigLoader {
     public async Task<Result<SiteConfig, ResultErrors>> Load() {
         var siteConfigPath = Path.Join(basePath, Website.SiteConfigFileName);
 
@@ -56,7 +56,7 @@ public sealed class SiteConfigLoader(string basePath) : ISiteConfigLoader {
             return default;
         }
 
-        using var reader = new StreamReader(siteConfigPath);
-        return await _parser.Parse(reader);
+        using var reader = File.OpenRead(siteConfigPath);
+        return await SiteConfigParser.Parse(reader);
     }
 }

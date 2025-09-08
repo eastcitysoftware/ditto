@@ -37,10 +37,14 @@ async Task ExecuteCommand(ParseResult parseResult) {
         return;
     }
 
-    var siteConfigLoader = new SiteConfigLoader(basePath);
-    var siteConfig = await siteConfigLoader.Load();
+    Console.WriteLine($"Generating website from '{basePath}' to '{outputPath}'...");
 
-    if (siteConfig.TryGetError(out var errors)) {
+    var modelValuesParser = new ModelValuesParser();
+
+    var siteConfigLoader = new SiteConfigLoader(basePath, new SiteConfigParser(modelValuesParser));
+    var siteConfigResult = await siteConfigLoader.Load();
+
+    if (siteConfigResult.TryGetError(out var e) && e is ResultErrors errors) {
         Console.WriteLine("Failed to load site configuration:");
         foreach (var error in errors) {
             Console.WriteLine($"  * Error: {error}");
@@ -48,25 +52,26 @@ async Task ExecuteCommand(ParseResult parseResult) {
         return;
     }
 
-    var layoutLoader = new LayoutLoader(basePath);
-    var layouts = await layoutLoader.LoadLayouts();
+    var viewLoader = new ViewLoader(basePath);
+    var layouts = await viewLoader.LoadViews(Website.LayoutsDirectory);
 
     if (layouts.Names.Count == 0) {
         Console.WriteLine($"No layouts found in the source directory. Must include at least the '{Website.DefaultLayoutName}' layout.");
         return;
     }
 
-    var partialLoader = new PartialLoader(basePath);
-    var partials = await partialLoader.LoadPartials();
-
+    var partials = await viewLoader.LoadViews(Website.PartialsDirectory);
+    var templateRender = new ViewRenderer(partials);
+    var documentProcessor = new DocumentProcessor();
     var sw = System.Diagnostics.Stopwatch.StartNew();
-    var result = await siteConfig.BindAsync(config => {
+
+    var result = await siteConfigResult.BindAsync(siteConfig => {
         var generator = new WebsiteGenerator(
             pageFileLoader: new PageFileLoader(basePath, outputPath),
-            pageParser: new PageParser(config),
-            pageWriter: new PageWriter(layouts, partials));
+            pageParser: new PageParser(modelValuesParser, siteConfig),
+            viewEngine: new ViewEngine(templateRender, documentProcessor, layouts));
 
-        return generator.Generate(basePath, outputPath);
+        return generator.Generate(basePath, outputPath, siteConfig);
     });
 
     sw.Stop();
