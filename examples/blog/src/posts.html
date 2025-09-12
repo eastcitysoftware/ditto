@@ -3,7 +3,7 @@ title = "Blog Posts"
 description = "A list of all blog posts."
 ---
 {{for post in collections.posts}}
-    <h2><a href="{{post.url}}">{{post.title}}</a></h2>
+    <h2><a href="{{post.path}}">{{post.title}}</a></h2>
     <p><em>{{post.data.date | date_only.to_date_time | date.to_string '%F'}}</em></p>
     <p>{{post.description}}</p>
     <hr/>
