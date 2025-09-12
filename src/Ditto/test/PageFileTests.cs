@@ -1,51 +1,5 @@
 namespace Ditto.Tests;
 
-// public sealed class PageFileTests {
-//     [Theory]
-//     [InlineData("/input/index.html", "/output/index.html", "/", "index")]
-//     [InlineData("/input/about/index.html", "/output/about/index.html", "/about/", "about")]
-//     [InlineData("/input/blog/post1.html", "/output/blog/post1/index.html", "/blog/post1/", "blog/post1")]
-//     [InlineData("/input/contact.html", "/output/contact/index.html", "/contact/", "contact")]
-//     public void HtmlFile_Index_WorksAsExpected(string inputPath, string outputPath, string path, string pageName) {
-//         var viewType = ViewType.Html;
-
-//         var pageFile = new PageFile(
-//             InputPath: inputPath,
-//             OutputPath: outputPath,
-//             Path: path,
-//             PageName: pageName,
-//             ViewType: viewType);
-
-//         Assert.Equal(inputPath, pageFile.InputPath);
-//         Assert.Equal(outputPath, pageFile.OutputPath);
-//         Assert.Equal(path, pageFile.Path);
-//         Assert.Equal(pageName, pageFile.PageName);
-//         Assert.Equal(viewType, pageFile.ViewType);
-//     }
-
-//     [Theory]
-//     [InlineData("/input/index.md", "/output/index.html", "/", "index")]
-//     [InlineData("/input/about/index.md", "/output/about/index.html", "/about/", "about")]
-//     [InlineData("/input/blog/post1.md", "/output/blog/post1/index.html", "/blog/post1/", "blog/post1")]
-//     [InlineData("/input/contact.md", "/output/contact/index.html", "/contact/", "contact")]
-//     public void MarkdownFile_Index_WorksAsExpected(string inputPath, string outputPath, string path, string pageName) {
-//         var viewType = ViewType.Markdown;
-
-//         var pageFile = new PageFile(
-//             InputPath: inputPath,
-//             OutputPath: outputPath,
-//             Path: path,
-//             PageName: pageName,
-//             ViewType: viewType);
-
-//         Assert.Equal(inputPath, pageFile.InputPath);
-//         Assert.Equal(outputPath, pageFile.OutputPath);
-//         Assert.Equal(path, pageFile.Path);
-//         Assert.Equal(pageName, pageFile.PageName);
-//         Assert.Equal(viewType, pageFile.ViewType);
-//     }
-// }
-
 public sealed class PageFileLoaderTests {
     [Fact]
     public void LoadFiles_ReturnsPageFiles_WhenValidInput() {

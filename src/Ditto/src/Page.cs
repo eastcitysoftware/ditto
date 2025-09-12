@@ -13,6 +13,7 @@ public record PageInfo(
 public sealed record Page(
     string Path,
     string Url,
+    string? PageTitle,
     string Title,
     string Description,
     string[] Tags,
@@ -38,10 +39,13 @@ public sealed class PageParser(IModelValuesParser modelValuesParser, SiteConfig 
             template = string.Concat(line, Environment.NewLine, await input.ReadToEndAsync());
         }
 
+        var pageTitle = frontMatter?.GetString("title");
+
         return new(
             Path: pageFile.Path,
             Url: UrlHelper.Combine(siteConfig.BaseUrl, pageFile.Path),
-            Title: GetTitle(frontMatter),
+            PageTitle: pageTitle,
+            Title: GetTitle(pageTitle),
             Description: frontMatter?.GetString("description") ?? siteConfig.Description,
             Tags: frontMatter?.GetStringArray("tags") ?? [],
             Data: frontMatter?.AsDictionary() ?? new Dictionary<string, object>(),
@@ -53,8 +57,8 @@ public sealed class PageParser(IModelValuesParser modelValuesParser, SiteConfig 
             ? layoutValue
             : Website.DefaultLayoutName;
 
-    private string GetTitle(ModelValues? frontMatter) =>
-        frontMatter?.GetString("title") is string titleValue && !string.IsNullOrWhiteSpace(titleValue)
+    private string GetTitle(string? pageTitle) =>
+        pageTitle is string titleValue && !string.IsNullOrWhiteSpace(titleValue)
             ? string.Concat(titleValue, siteConfig.TitleSeparator, siteConfig.Title)
             : siteConfig.Title;
 

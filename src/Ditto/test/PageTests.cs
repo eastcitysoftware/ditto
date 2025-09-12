@@ -26,13 +26,18 @@ public sealed class PageParserTests {
         using var input = new StringReader(pageContent);
         var page = await _pageParser.Parse(input, pageFile);
 
-        Assert.Equal($"Test Page - {Shared.SiteConfig.Title}", page.Title);
+        Assert.Equal(pageFile.Path, page.Path);
+        Assert.Equal($"{Shared.SiteConfig.BaseUrl}{page.Path}", page.Url);
+        Assert.Equal("Test Page", page.PageTitle);
+        Assert.Equal($"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}", page.Title);
         Assert.Equal("This is a test page.", page.Description);
+
+
         Assert.NotNull(page.Data);
         Assert.Contains("title", page.Data.Keys);
         Assert.Contains("description", page.Data.Keys);
         Assert.Contains("layout", page.Data.Keys);
-        Assert.Equal(pageFile.Path, page.Path);
+
         Assert.Equal(pageFile.PageName, page.View.Name);
         Assert.Equal("test-template", page.View.LayoutName);
         Assert.Equal(ViewType.Html, page.View.Type);
@@ -69,7 +74,7 @@ public sealed class PageParserTests {
         using var input = new StringReader(pageContent);
         var page = await _pageParser.Parse(input, pageFile);
 
-        Assert.Equal($"Test Page - {Shared.SiteConfig.Title}", page.Title);
+        Assert.Equal($"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}", page.Title);
         Assert.Equal("This is a test page.", page.Description);
         Assert.NotNull(page.Data);
         Assert.Contains("title", page.Data.Keys);
