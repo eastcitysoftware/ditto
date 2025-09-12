@@ -15,7 +15,11 @@ public sealed class PageFileLoader(string basePath, string outputPath) : IPageFi
     private readonly string _indexFileName = string.Concat("index", Website.TemplateExtension);
     public IReadOnlyList<PageFile> LoadFiles() {
         var pages = new List<PageFile>();
-        foreach (var filePath in Directory.GetFiles(basePath, string.Concat("*", Website.TemplateExtension), SearchOption.AllDirectories)) {
+        var filePaths =
+            Directory.GetFiles(basePath, string.Concat("*", Website.TemplateExtension), SearchOption.AllDirectories)
+                .Union(Directory.GetFiles(basePath, "*.md", SearchOption.AllDirectories));
+
+        foreach (var filePath in filePaths) {
             var relativeFilePath = Path.GetRelativePath(basePath, filePath);
 
             // skip files in the layouts and partials directory
