@@ -93,6 +93,7 @@ public sealed class PageCollectionTests {
     private static Page CreatePage(string path) =>
         new(Path: $"/{path}",
             Url: $"https://example.com/{path}",
+            PageTitle: Path.GetRandomFileName(),
             Title: Path.GetRandomFileName(),
             Description: Path.GetRandomFileName(),
             Tags: [],
@@ -107,6 +108,11 @@ public sealed class PathHelperTests {
     [InlineData(@"C:\Windows", true)]
     [InlineData(@"C:\Windows\System32", true)]
     [InlineData(@"C:\Program Files", true)]
+    [InlineData(@"C:\Program Files (x86)", true)]
+    [InlineData("C:/Windows", true)]
+    [InlineData("C:/Windows/System32", true)]
+    [InlineData("C:/Program Files", true)]
+    [InlineData("C:/Program Files (x86)", true)]
     [InlineData("/bin", true)]
     [InlineData("/boot", true)]
     [InlineData("/dev", true)]

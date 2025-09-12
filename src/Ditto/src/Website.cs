@@ -98,13 +98,12 @@ public static class PageCollection {
 }
 
 internal static class PathHelper {
-    private static readonly HashSet<string> _systemPaths = [
-        Environment.GetFolderPath(Environment.SpecialFolder.System),
-        Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-        "/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/proc", "/root", "/sbin", "/sys", "/usr", "/var" // Common Linux/macOS system directories
+    internal static readonly HashSet<string> _systemPaths = [
+        // Common Windows system directory
+        @"C:\Windows", @"C:\Windows\System32", @"C:\Program Files", @"C:\Program Files (x86)",
+        "C:/Windows", "C:/Windows/System32", "C:/Program Files", "C:/Program Files (x86)",
+        // Common Linux/macOS system directories
+        "/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/proc", "/root", "/sbin", "/sys", "/usr", "/var"
     ];
 
     internal static bool IsSystemPath(string pathToTest) =>
