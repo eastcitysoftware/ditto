@@ -3,6 +3,6 @@ title = "About Page"
 description = "This is the about page description."
 layout = "test-template"
 ---
-<h1>{{title}}</h1>
-<h2>{{description}}</h2>
-<p>This is the content of the about page.</p>
+# {{title}}
+## {{description}}
+This is the content of the about page.

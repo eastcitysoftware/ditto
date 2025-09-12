@@ -26,13 +26,13 @@ public static class Shared {
         }
     }
 
-    public static IDocumentProcessor TestDocumentProcessor =>
-        new DocumentProcessor();
+    public static IViewProcessor TestMarkdownProcessor =>
+        new MarkdownProcessor();
 
     public static IViewEngine TestViewEngine {
         get {
             var layouts = TestViewLoader.LoadViews(Website.LayoutsDirectory).Result;
-            return new ViewEngine(TestViewRenderer, TestDocumentProcessor, layouts);
+            return new ViewEngine(TestViewRenderer, [TestMarkdownProcessor], layouts);
         }
     }
 

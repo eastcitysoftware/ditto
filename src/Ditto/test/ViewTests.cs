@@ -12,6 +12,7 @@ public sealed class ViewEngineTests {
         var page = new Page(
             Path: "/test-page",
             Url: "https://example.com/test-page",
+            PageTitle: "Test Page",
             Title: $"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}",
             Description: "This is a test page.",
             Tags: [],
@@ -57,6 +58,7 @@ public sealed class ViewEngineTests {
         var page = new Page(
             Path: "/test-page",
             Url: "https://example.com/test-page",
+            PageTitle: "Test Page",
             Title: $"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}",
             Description: "This is a test page.",
             Tags: [],
@@ -183,7 +185,7 @@ public sealed class ViewLoaderTests {
     }
 }
 
-public sealed class DocumentProcessorTests {
+public sealed class MarkdownProcessorTests {
     [Fact]
     public async Task ProcessMarkdownAsync_ReturnsHtml_ForValidMarkdown() {
         var markdown = """
@@ -196,7 +198,8 @@ public sealed class DocumentProcessorTests {
             - Item 3
             """;
 
-        var result = await Shared.TestDocumentProcessor.Process(markdown);
+        var view = new View("test", markdown, ViewType.Markdown);
+        var result = await Shared.TestMarkdownProcessor.Process(view);
 
         var expected = """
             <h1>Title</h1>
@@ -208,15 +211,17 @@ public sealed class DocumentProcessorTests {
             </ul>
             """;
 
-        Shared.AssertHtmlEqual(expected, result);
+        Assert.Equal(view.Name, result.Name);
+        Assert.Equal(ViewType.Markdown, result.Type);
+        Shared.AssertHtmlEqual(expected, result.Content);
     }
 
     [Fact]
     public async Task ProcessMarkdownAsync_ReturnsEmptyString_WhenInputIsEmpty() {
         var markdown = string.Empty;
+        var view = new View("empty", markdown, ViewType.Markdown);
+        var result = await Shared.TestMarkdownProcessor.Process(view);
 
-        var result = await Shared.TestDocumentProcessor.Process(markdown);
-
-        Assert.Equal(string.Empty, result);
+        Assert.Equal(string.Empty, result.Content);
     }
 }

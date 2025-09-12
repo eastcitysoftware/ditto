@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Diagnostics.CodeAnalysis;
 using Markdig;
 using Scriban;
 using Scriban.Parsing;
@@ -19,13 +17,13 @@ public interface IViewLoader {
     Task<ViewCollection> LoadViews(string subdirectory);
 }
 
-public interface IDocumentProcessor {
-    ValueTask<string> Process(string document);
+public interface IViewProcessor {
+    ValueTask<View> Process(View view);
 }
 
 public sealed class ViewEngine(
     IViewRenderer viewRenderer,
-    IDocumentProcessor documentProcessor,
+    IEnumerable<IViewProcessor> viewProcessors,
     ViewCollection layouts) : IViewEngine {
     public async ValueTask<string> Render(Page page, IDictionary<string, object>? supplementalData) {
         var viewModel = new PageViewModel(
@@ -39,16 +37,15 @@ public sealed class ViewEngine(
             supplementalData["data"] = page.Data;
         }
 
-        // first render the page, to provide variable substitution for the layout
-        // and script execution (via Scriban)
-        var renderedPage = await viewRenderer.Render(
+        var renderedView =  page.View with {
+            Content = await viewRenderer.Render(
             view: page.View.Content,
             viewModel: viewModel,
-            supplementalData: supplementalData);
+            supplementalData: supplementalData)
+        };
 
-        // if this is a document, process it as markdown
-        if (page.View.Type == ViewType.Markdown) {
-            renderedPage = await documentProcessor.Process(renderedPage);
+        foreach (var processor in viewProcessors) {
+            renderedView = await processor.Process(renderedView);
         }
 
         if (layouts.Get(page.View.LayoutName) is View layout) {
@@ -57,12 +54,12 @@ public sealed class ViewEngine(
                 viewModel: new LayoutViewModel(
                     Title: viewModel.Title,
                     Description: viewModel.Description,
-                    Content: renderedPage,
+                    Content: renderedView.Content,
                     Head: default),
                 supplementalData: supplementalData);
         }
 
-        return renderedPage;
+        return renderedView.Content;
     }
 }
 
@@ -141,9 +138,11 @@ public sealed class ViewLoader(string basePath) : IViewLoader {
     }
 }
 
-public sealed class DocumentProcessor : IDocumentProcessor {
-    public ValueTask<string> Process(string document) =>
-        ValueTask.FromResult(Markdown.ToHtml(document));
+public sealed class MarkdownProcessor : IViewProcessor {
+    public ValueTask<View> Process(View view) =>
+        view.Type != ViewType.Markdown
+            ? ValueTask.FromResult(view)
+            : ValueTask.FromResult(view with { Content = Markdown.ToHtml(view.Content) });
 }
 
 public sealed class ViewCollection() {
