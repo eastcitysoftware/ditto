@@ -10,6 +10,7 @@ public sealed class PageParserTests {
             title = "Test Page"
             description = "This is a test page."
             layout = "test-template"
+            tags = ["test", "sample"]
             ---
             <h1>{{title}}</h1>
             <h2>{{description}}</h2>
@@ -32,11 +33,12 @@ public sealed class PageParserTests {
         Assert.Equal($"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}", page.Title);
         Assert.Equal("This is a test page.", page.Description);
 
-
         Assert.NotNull(page.Data);
         Assert.Contains("title", page.Data.Keys);
         Assert.Contains("description", page.Data.Keys);
         Assert.Contains("layout", page.Data.Keys);
+
+        Assert.Equal(2, page.Tags.Length);
 
         Assert.Equal(pageFile.PageName, page.View.Name);
         Assert.Equal("test-template", page.View.LayoutName);
@@ -74,12 +76,19 @@ public sealed class PageParserTests {
         using var input = new StringReader(pageContent);
         var page = await _pageParser.Parse(input, pageFile);
 
+
+        Assert.Equal(pageFile.Path, page.Path);
+        Assert.Equal($"{Shared.SiteConfig.BaseUrl}{page.Path}", page.Url);
+        Assert.Equal("Test Page", page.PageTitle);
         Assert.Equal($"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}", page.Title);
         Assert.Equal("This is a test page.", page.Description);
+
         Assert.NotNull(page.Data);
         Assert.Contains("title", page.Data.Keys);
         Assert.Contains("description", page.Data.Keys);
-        Assert.Equal(pageFile.Path, page.Path);
+
+        Assert.Empty(page.Tags);
+
         Assert.Equal(pageFile.PageName, page.View.Name);
         Assert.Equal(Website.DefaultLayoutName, page.View.LayoutName);
         Assert.Equal(ViewType.Html, page.View.Type);
@@ -110,10 +119,19 @@ public sealed class PageParserTests {
         var input = new StringReader(pageContent);
         var page = await _pageParser.Parse(input, pageFile);
 
+        Assert.Equal(pageFile.Path, page.Path);
+        Assert.Equal($"{Shared.SiteConfig.BaseUrl}{page.Path}", page.Url);
+
+        Assert.Null(page.PageTitle);
         Assert.Equal(Shared.SiteConfig.Title, page.Title);
         Assert.Equal(Shared.SiteConfig.Description, page.Description);
+
         Assert.NotNull(page.Data);
         Assert.Empty(page.Data);
+
+        Assert.Empty(page.Tags);
+
+        Assert.Equal(pageFile.PageName, page.View.Name);
         Assert.Equal(Website.DefaultLayoutName, page.View.LayoutName);
         Assert.Equal(ViewType.Html, page.View.Type);
 
