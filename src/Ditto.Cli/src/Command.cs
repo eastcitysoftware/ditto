@@ -4,17 +4,15 @@ namespace Ditto.Cli;
 
 internal sealed class GenerateWebsiteCommand(string basePath, string outputPath, bool hotReload) {
     public async Task Execute() {
-        var siteConfigLoader = new SiteConfigLoader(basePath, new SiteConfigParser(new ModelValuesParser()));
+        var siteConfigLoader = new SiteConfigLoader(basePath);
         var viewLoader = new ViewLoader(basePath);
         var pageFileLoader = new PageFileLoader(basePath, outputPath);
-        var modelValuesParser = new ModelValuesParser();
 
         // generate website once, then watch for changes if hotReload is enabled
         await GenerateWebsite(
             siteConfigLoader,
             viewLoader,
-            pageFileLoader,
-            modelValuesParser);
+            pageFileLoader);
 
         if (hotReload) {
             using var watcher = new WebsiteFileWatcher(basePath);
@@ -23,8 +21,7 @@ internal sealed class GenerateWebsiteCommand(string basePath, string outputPath,
                 await GenerateWebsite(
                     siteConfigLoader,
                     viewLoader,
-                    pageFileLoader,
-                    modelValuesParser);
+                    pageFileLoader);
             };
 
             Console.WriteLine("Press ESC to stop watching for file changes...");
@@ -42,8 +39,7 @@ internal sealed class GenerateWebsiteCommand(string basePath, string outputPath,
     private async Task GenerateWebsite(
         SiteConfigLoader siteConfigLoader,
         ViewLoader viewLoader,
-        PageFileLoader pageFileLoader,
-        ModelValuesParser modelValuesParser) {
+        PageFileLoader pageFileLoader) {
         var siteConfigResult = await siteConfigLoader.Load();
 
         if (siteConfigResult.TryGetError(out var e) && e is ResultErrors errors) {
@@ -61,7 +57,7 @@ internal sealed class GenerateWebsiteCommand(string basePath, string outputPath,
         var result = await siteConfigResult.BindAsync(siteConfig => {
             var generator = new WebsiteGenerator(
                 pageFileLoader: pageFileLoader,
-                pageParser: new PageParser(modelValuesParser, siteConfig),
+                pageParser: new PageParser(siteConfig),
                 viewEngine: new ViewEngine(
                     new ViewRenderer(partials),
                     [new MarkdownProcessor()],

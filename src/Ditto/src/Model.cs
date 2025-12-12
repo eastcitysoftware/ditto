@@ -3,12 +3,8 @@ using CsToml;
 
 namespace Ditto;
 
-public interface IModelValuesParser {
-    Task<ModelValues?> Parse(Stream input);
-}
-
-public sealed class ModelValuesParser : IModelValuesParser {
-    public async Task<ModelValues?> Parse(Stream input) {
+public static class ModelValuesParser {
+    public static async Task<ModelValues?> Parse(Stream input) {
         var toml = await CsTomlSerializer.DeserializeAsync<TomlDocument>(input);
 
         if (toml is null) {
