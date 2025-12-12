@@ -30,7 +30,7 @@ public sealed class ModelValuesParserTests {
             time_array = [12:00:00, 13:00:00, 14:00:00]
             """));
 
-        var modelValues = await Shared.ModelValuesParser.Parse(input);
+        var modelValues = await ModelValuesParser.Parse(input);
 
         Assert.NotNull(modelValues);
         Assert.Equal("value", modelValues.GetString("str"));
@@ -61,7 +61,7 @@ public sealed class ModelValuesParserTests {
     public async Task Parse_ReturnsEmptyModelValues_ForEmptyInput() {
         var input = new MemoryStream(Encoding.UTF8.GetBytes(""));
 
-        var modelValues = await Shared.ModelValuesParser.Parse(input);
+        var modelValues = await ModelValuesParser.Parse(input);
 
         Assert.NotNull(modelValues);
         Assert.Null(modelValues.GetString("str"));

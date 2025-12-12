@@ -8,7 +8,7 @@ public sealed class PageFileLoaderTests {
 
         Assert.NotNull(pageFiles);
         Assert.NotEmpty(pageFiles);
-        Assert.Equal(4, pageFiles.Count);
+        Assert.Equal(5, pageFiles.Count);
         Assert.All(pageFiles, pageFile => {
             Assert.NotNull(pageFile.InputPath);
             Assert.NotNull(pageFile.OutputPath);

@@ -1,8 +1,8 @@
 ---
-title = "Hello - Posts"
+title = "The Hello Post"
 description = "This is the hello post description."
+published = 1999-01-01
 ---
 {{ include 'header' }}
-<h1>{{title}}</h1>
-<h2>{{description}}</h2>
+{{ include "posts/title" }}
 <p>This is the content of the hello post page.</p>

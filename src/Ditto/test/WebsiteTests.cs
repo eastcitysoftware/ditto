@@ -5,7 +5,7 @@ public sealed class WebsiteGeneratorTests {
     public async Task GenerateWebsite_CreatesOutputFiles_WhenValidInput() {
         var generator = new WebsiteGenerator(
             pageFileLoader: new PageFileLoader(Shared.BasePath, Shared.OutputPath),
-            pageParser: new PageParser(Shared.ModelValuesParser, Shared.SiteConfig),
+            pageParser: new PageParser(Shared.SiteConfig),
             viewEngine: Shared.TestViewEngine);
 
         var result = await generator.Generate(Shared.BasePath, Shared.OutputPath, Shared.SiteConfig);
@@ -15,8 +15,9 @@ public sealed class WebsiteGeneratorTests {
 
         var indexFile = Path.Join(Shared.OutputPath, "index.html");
         var aboutFile = Path.Join(Shared.OutputPath, "about", "index.html");
+        var postsFile = Path.Join(Shared.OutputPath, "posts", "index.html");
 
-        var expectedFiles = new[] { indexFile, aboutFile,
+        var expectedFiles = new[] { indexFile, aboutFile, postsFile,
             Path.Join(Shared.OutputPath, "posts", "1999-01-01-hello", "index.html"),
             Path.Join(Shared.OutputPath, "posts", "1999-01-02-hello-copy", "index.html"),
         };
@@ -41,6 +42,7 @@ public sealed class WebsiteGeneratorTests {
                 <h1>Example Site</h1>
                 <h2>This is an example site.</h2>
                 <p>This is the content of the test page.</p>
+                <p>https://example.com</p>
             </body>
         </html>
         """;
@@ -59,6 +61,7 @@ public sealed class WebsiteGeneratorTests {
                     <h1>About Page - Example Site</h1>
                     <h2>This is the about page description.</h2>
                     <p>This is the content of the about page.</p>
+                    <p>This is some other data.</p>
                 </main>
                 <footer>
                     <p>&copy; {Shared.SiteConfig.Title}</p>
@@ -68,6 +71,22 @@ public sealed class WebsiteGeneratorTests {
         """;
 
         Shared.AssertHtmlEqual(aboutExpected, aboutFileResult);
+
+        var postsFileResult = await File.ReadAllTextAsync(postsFile);
+        var postsExpected = $"""
+        <html>
+            <head>
+                <title>Example Site</title>
+                <meta name="description" content="This is an example site.">
+            </head>
+            <body>
+                <div>The Hello Post</div>
+                <div>The Hello Copy Post</div>
+            </body>
+        </html>
+        """;
+
+        Shared.AssertHtmlEqual(postsExpected, postsFileResult);
     }
 }
 
@@ -83,20 +102,21 @@ public sealed class PageCollectionTests {
             CreatePage("index")
         };
 
-        var pageCollection = PageCollection.CreateFromPages(pages);
+        var pageCollection = PageCollectionFactory.Create(pages);
 
         Assert.NotNull(pageCollection);
-        Assert.Equal(3, pageCollection["blog"].Count);
-        Assert.All(pageCollection["blog"], page => Assert.StartsWith("/blog/", page.Path));
+        Assert.Equal(2, pageCollection.Count());
     }
 
     private static Page CreatePage(string path) =>
         new(Path: $"/{path}",
+            Slug: Path.GetFileName(Path.GetRandomFileName()),
             Url: $"https://example.com/{path}",
             PageTitle: Path.GetRandomFileName(),
             Title: Path.GetRandomFileName(),
             Description: Path.GetRandomFileName(),
             Tags: [],
+            Published: default,
             Data: new Dictionary<string, object>(),
             View: new("valid-page", "<h1>{{title}}</h1>", ViewType.Html));
 }

@@ -4,18 +4,14 @@ namespace Ditto.Tests;
 
 public static class Shared {
     public static string BasePath => Path.Join(AppContext.BaseDirectory, "assets", "pages");
-    public static IModelValuesParser ModelValuesParser => new ModelValuesParser();
     public static string OutputPath => Path.Join(AppContext.BaseDirectory, "assets", "output");
 
     public static SiteConfig SiteConfig => new(
         BaseUrl: "https://example.com",
         Title: "Example Site",
         Description: "This is an example site.",
-        TitleSeparator: Website.DefaultTitleSeparator);
-
-    public static IDictionary<string, object> SupplementalData => new Dictionary<string, object> {
-        ["site"] = SiteConfig
-    };
+        TitleSeparator: Website.DefaultTitleSeparator,
+        Data: new Dictionary<string, object>());
 
     public static IViewLoader TestViewLoader => new ViewLoader(BasePath);
 

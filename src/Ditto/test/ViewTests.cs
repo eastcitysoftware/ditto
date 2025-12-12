@@ -6,22 +6,28 @@ public sealed class ViewEngineTests {
         var pageContent = """
             <h1>{{title}}</h1>
             <h2>{{description}}</h2>
+            <h2>{{slug}}</h2>
+            {{ if published }}
+            <h3>{{ published | date.to_string '%Y-%m-%d' }}</h3>
+            {{ end }}
             <p>This is the content of the test page.</p>
             """;
 
         var page = new Page(
             Path: "/test-page",
+            Slug: "test-page",
             Url: "https://example.com/test-page",
             PageTitle: "Test Page",
             Title: $"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}",
             Description: "This is a test page.",
             Tags: [],
+            Published: default,
             Data: new Dictionary<string, object>(),
             View: new(Path.GetRandomFileName(), pageContent, ViewType.Html, "test-template"));
 
-        var result = await Shared.TestViewEngine.Render(page, Shared.SupplementalData);
+        var result = await Shared.TestViewEngine.Render(page, Shared.SiteConfig, []);
 
-        var expected = $"""
+        Shared.AssertHtmlEqual(result, $"""
             <html>
                 <head>
                     <title>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</title>
@@ -32,6 +38,7 @@ public sealed class ViewEngineTests {
                     <main>
                         <h1>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</h1>
                         <h2>This is a test page.</h2>
+                        <h2>test-page</h2>
                         <p>This is the content of the test page.</p>
                     </main>
                     <footer>
@@ -39,35 +46,12 @@ public sealed class ViewEngineTests {
                     </footer>
                 </body>
             </html>
-            """;
+            """);
 
-        Shared.AssertHtmlEqual(expected, result);
-    }
+        page = page with { Published = new(2023, 10, 05) };
+        result = await Shared.TestViewEngine.Render(page, Shared.SiteConfig, []);
 
-    [Fact]
-    public async Task Render_ReturnsRenderedString_ForMarkdown() {
-
-        var pageContent = """
-            # Test Page{{site.title_separator}}{{site.title}}
-
-            This is a test page.
-
-            This is the content of the test page.
-            """;
-
-        var page = new Page(
-            Path: "/test-page",
-            Url: "https://example.com/test-page",
-            PageTitle: "Test Page",
-            Title: $"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}",
-            Description: "This is a test page.",
-            Tags: [],
-            Data: new Dictionary<string, object>(),
-            View: new(Path.GetRandomFileName(), pageContent, ViewType.Markdown, "test-template"));
-
-        var result = await Shared.TestViewEngine.Render(page, Shared.SupplementalData);
-
-        var expected = $"""
+        Shared.AssertHtmlEqual(result, $"""
             <html>
                 <head>
                     <title>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</title>
@@ -77,6 +61,60 @@ public sealed class ViewEngineTests {
                     <header>Test Template</header>
                     <main>
                         <h1>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</h1>
+                        <h2>This is a test page.</h2>
+                        <h2>test-page</h2>
+                        <h3>2023-10-05</h3>
+                        <p>This is the content of the test page.</p>
+                    </main>
+                    <footer>
+                        <p>&copy; {Shared.SiteConfig.Title}</p>
+                    </footer>
+                </body>
+            </html>
+            """);
+    }
+
+    [Fact]
+    public async Task Render_ReturnsRenderedString_ForMarkdown() {
+
+        var pageContent = """
+            # Test Page{{site.title_separator}}{{site.title}}
+
+            ## {{ slug }}
+
+            {{ if published }}
+            ## {{ published | date.to_string '%Y-%m-%d' }}
+            {{ end }}
+            This is a test page.
+
+            This is the content of the test page.
+            """;
+
+        var page = new Page(
+            Path: "/test-page",
+            Slug: "test-page",
+            Url: "https://example.com/test-page",
+            PageTitle: "Test Page",
+            Title: $"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}",
+            Description: "This is a test page.",
+            Tags: [],
+            Published: default,
+            Data: new Dictionary<string, object>(),
+            View: new(Path.GetRandomFileName(), pageContent, ViewType.Markdown, "test-template"));
+
+        var result = await Shared.TestViewEngine.Render(page, Shared.SiteConfig, []);
+
+        Shared.AssertHtmlEqual(result, $"""
+            <html>
+                <head>
+                    <title>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</title>
+                    <meta name="description" content="This is a test page.">
+                </head>
+                <body>
+                    <header>Test Template</header>
+                    <main>
+                        <h1>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</h1>
+                        <h2>test-page</h2>
                         <p>This is a test page.</p>
                         <p>This is the content of the test page.</p>
                     </main>
@@ -85,9 +123,32 @@ public sealed class ViewEngineTests {
                     </footer>
                 </body>
             </html>
-            """;
+            """);
 
-        Shared.AssertHtmlEqual(expected, result);
+        page = page with { Published = new(2023, 10, 5) };
+        result = await Shared.TestViewEngine.Render(page, Shared.SiteConfig, []);
+
+        Shared.AssertHtmlEqual(result, $"""
+            <html>
+                <head>
+                    <title>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</title>
+                    <meta name="description" content="This is a test page.">
+                </head>
+                <body>
+                    <header>Test Template</header>
+                    <main>
+                        <h1>Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}</h1>
+                        <h2>test-page</h2>
+                        <h2>2023-10-05</h2>
+                        <p>This is a test page.</p>
+                        <p>This is the content of the test page.</p>
+                    </main>
+                    <footer>
+                        <p>&copy; {Shared.SiteConfig.Title}</p>
+                    </footer>
+                </body>
+            </html>
+            """);
     }
 }
 
@@ -98,7 +159,7 @@ public sealed class ViewRendererTests {
         var model = new { name = "World" };
         var renderer = new ViewRenderer();
 
-        var result = await renderer.Render(view, model, default);
+        var result = await renderer.Render(view, model);
 
         Assert.Equal("Hello, World!", result);
     }
@@ -109,7 +170,7 @@ public sealed class ViewRendererTests {
         var model = new { };
         var renderer = new ViewRenderer();
 
-        var result = await renderer.Render(view, model, default);
+        var result = await renderer.Render(view, model);
 
         Assert.Equal("Hello, !", result);
     }
@@ -123,7 +184,7 @@ public sealed class ViewRendererTests {
         var model = new { name = "Alice" };
         var renderer = new ViewRenderer(partials);
 
-        var result = await renderer.Render(view, model, default);
+        var result = await renderer.Render(view, model);
         Assert.Equal("Hello, Alice!", result);
     }
 
@@ -133,7 +194,7 @@ public sealed class ViewRendererTests {
         var model = new { testDate = new DateOnly(2024, 6, 15) };
         var renderer = new ViewRenderer();
 
-        var result = await renderer.Render(view, model, default);
+        var result = await renderer.Render(view, model);
 
         Assert.Equal("The date is 2024-06-15 00:00:00.", result);
     }
@@ -171,6 +232,7 @@ public sealed class ViewLoaderTests {
         var views = await Shared.TestViewLoader.LoadViews(Website.LayoutsDirectory);
         Assert.NotNull(views);
         Assert.NotEmpty(views.Names);
+        Assert.Equal(2, views.Names.Count);
         Assert.Contains("default", views.Names);
         Assert.Contains("test-template", views.Names);
     }
@@ -180,8 +242,11 @@ public sealed class ViewLoaderTests {
         var views = await Shared.TestViewLoader.LoadViews(Website.PartialsDirectory);
         Assert.NotNull(views);
         Assert.NotEmpty(views.Names);
+        Assert.Equal(4, views.Names.Count);
         Assert.Contains("header", views.Names);
         Assert.Contains("footer", views.Names);
+        Assert.Contains("posts/title", views.Names);
+        Assert.Contains("posts/hello-world/info-graphic", views.Names);
     }
 }
 

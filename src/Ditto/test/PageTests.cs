@@ -1,7 +1,7 @@
 namespace Ditto.Tests;
 
 public sealed class PageParserTests {
-    private readonly PageParser _pageParser = new(Shared.ModelValuesParser, Shared.SiteConfig);
+    private readonly PageParser _pageParser = new(Shared.SiteConfig);
 
     [Fact]
     public async Task Parse_ReturnsPage_WhenValidInput() {
@@ -11,6 +11,7 @@ public sealed class PageParserTests {
             description = "This is a test page."
             layout = "test-template"
             tags = ["test", "sample"]
+            published = 2023-10-05
             ---
             <h1>{{title}}</h1>
             <h2>{{description}}</h2>
@@ -20,7 +21,7 @@ public sealed class PageParserTests {
         var pageFile = new PageFile(
             InputPath: Path.ChangeExtension(Path.GetRandomFileName(), "html"),
             OutputPath: Path.ChangeExtension(Path.GetRandomFileName(), "html"),
-            Path: "/valid-page/",
+            Path: "/about/valid-page/",
             PageName: "valid-page",
             ViewType: ViewType.Html);
 
@@ -28,15 +29,21 @@ public sealed class PageParserTests {
         var page = await _pageParser.Parse(input, pageFile);
 
         Assert.Equal(pageFile.Path, page.Path);
+        Assert.Equal(pageFile.PageName, page.Slug);
+        Assert.Equal("/about/valid-page/", page.Path);
+        Assert.Equal("valid-page", page.Slug);
         Assert.Equal($"{Shared.SiteConfig.BaseUrl}{page.Path}", page.Url);
         Assert.Equal("Test Page", page.PageTitle);
         Assert.Equal($"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}", page.Title);
         Assert.Equal("This is a test page.", page.Description);
+        Assert.Equal(new DateTime(2023, 10, 5), page.Published);
 
         Assert.NotNull(page.Data);
-        Assert.Contains("title", page.Data.Keys);
-        Assert.Contains("description", page.Data.Keys);
-        Assert.Contains("layout", page.Data.Keys);
+        Assert.DoesNotContain("title", page.Data.Keys);
+        Assert.DoesNotContain("description", page.Data.Keys);
+        Assert.DoesNotContain("layout", page.Data.Keys);
+        Assert.DoesNotContain("tags", page.Data.Keys);
+        Assert.DoesNotContain("published", page.Data.Keys);
 
         Assert.Equal(2, page.Tags.Length);
 
@@ -82,10 +89,14 @@ public sealed class PageParserTests {
         Assert.Equal("Test Page", page.PageTitle);
         Assert.Equal($"Test Page{Shared.SiteConfig.TitleSeparator}{Shared.SiteConfig.Title}", page.Title);
         Assert.Equal("This is a test page.", page.Description);
+        Assert.Null(page.Published);
 
         Assert.NotNull(page.Data);
-        Assert.Contains("title", page.Data.Keys);
-        Assert.Contains("description", page.Data.Keys);
+        Assert.DoesNotContain("title", page.Data.Keys);
+        Assert.DoesNotContain("description", page.Data.Keys);
+        Assert.DoesNotContain("layout", page.Data.Keys);
+        Assert.DoesNotContain("tags", page.Data.Keys);
+        Assert.DoesNotContain("published", page.Data.Keys);
 
         Assert.Empty(page.Tags);
 
@@ -125,11 +136,11 @@ public sealed class PageParserTests {
         Assert.Null(page.PageTitle);
         Assert.Equal(Shared.SiteConfig.Title, page.Title);
         Assert.Equal(Shared.SiteConfig.Description, page.Description);
+        Assert.Empty(page.Tags);
+        Assert.Null(page.Published);
 
         Assert.NotNull(page.Data);
         Assert.Empty(page.Data);
-
-        Assert.Empty(page.Tags);
 
         Assert.Equal(pageFile.PageName, page.View.Name);
         Assert.Equal(Website.DefaultLayoutName, page.View.LayoutName);
