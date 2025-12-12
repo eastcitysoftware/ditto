@@ -33,12 +33,14 @@ public sealed class WebsiteGenerator(
             Directory.CreateDirectory(outputPath);
         }
 
+        // load page files
         var pageFiles = pageFileLoader.LoadFiles();
 
         if (pageFiles.Count == 0) {
             return Result.Error($"No page files found in the source directory '{sourcePath}'.");
         }
 
+        // parse pages
         var pageTasks = pageFiles.Select(async pageFile => {
             using var input = new StreamReader(pageFile.InputPath);
             var page = await pageParser.Parse(input, pageFile);
@@ -47,8 +49,29 @@ public sealed class WebsiteGenerator(
 
         var pages = await Task.WhenAll(pageTasks);
 
-        var pageCollections = PageCollection.CreateFromPages(pages.Select(x => x.page));
+        var pageCollections = PageCollectionFactory.Create(pages.Select(x => x.page));
 
+        // delete any index.html files that aren't in the source
+        var pageOutputPathIndex =
+            new HashSet<string>(
+                pageFiles.Select(x => x.OutputPath),
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in Directory.EnumerateFiles(outputPath, "index.html", SearchOption.AllDirectories)) {
+            var fullPath = Path.GetFullPath(file);
+            if (!pageOutputPathIndex.Contains(fullPath)) {
+                File.Delete(fullPath);
+            }
+        }
+
+        // delete any empty directories
+        foreach (var dir in Directory.GetDirectories(outputPath, "*", SearchOption.AllDirectories).OrderByDescending(x => x.Length)) {
+            if (!Directory.EnumerateFileSystemEntries(dir).Any()) {
+                Directory.Delete(dir, false);
+            }
+        }
+
+        // render pages
         var pageRenderTasks = pages.Select(async pageTuple => {
             var (page, outputPath) = pageTuple;
             var outputDir = Path.GetDirectoryName(outputPath);
@@ -59,10 +82,8 @@ public sealed class WebsiteGenerator(
 
             var renderedContent = await viewEngine.Render(
                 page: page,
-                supplementalData: new Dictionary<string, object>() {
-                    ["site"] = siteConfig,
-                    ["collections"] = pageCollections
-                });
+                siteConfig: siteConfig,
+                collections: pageCollections);
 
             using var writer = new StreamWriter(outputPath);
             await writer.WriteAsync(renderedContent);
@@ -70,30 +91,6 @@ public sealed class WebsiteGenerator(
 
         await Task.WhenAll(pageRenderTasks);
         return Result.Ok();
-    }
-}
-
-public static class PageCollection {
-    public static Dictionary<string, List<PageInfo>> CreateFromPages(IEnumerable<PageInfo> pages) {
-        var pageDict = new Dictionary<string, List<PageInfo>>();
-
-        // collections are derived from the first segment of the url
-        // only pages with n > 1 subpages are included in collections
-        foreach (var page in pages) {
-            if (page.Path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) is string[] segments
-                && segments.Length > 1) {
-                var collectionName = segments[0];
-
-                if (pageDict.TryGetValue(collectionName, out var value)) {
-                    pageDict[collectionName].Add(page);
-                }
-                else {
-                    pageDict[collectionName] = [page];
-                }
-            }
-        }
-
-        return pageDict;
     }
 }
 

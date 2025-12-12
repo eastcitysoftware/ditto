@@ -6,16 +6,23 @@ public sealed record SiteConfig(
     string BaseUrl,
     string Title,
     string Description,
-    string TitleSeparator = Website.DefaultTitleSeparator) {
-}
+    string TitleSeparator,
+    IDictionary<string, object> Data);
 
 public interface ISiteConfigParser {
     Task<Result<SiteConfig, ResultErrors>> Parse(Stream input);
 }
 
-public sealed class SiteConfigParser(IModelValuesParser modelValuesParser) : ISiteConfigParser {
-    public async Task<Result<SiteConfig, ResultErrors>> Parse(Stream input) {
-        var toml = await modelValuesParser.Parse(input);
+public static class SiteConfigParser {
+    public static async Task<Result<SiteConfig, ResultErrors>> Parse(Stream input) {
+        ModelValues? toml = default;
+        try {
+            toml = await ModelValuesParser.Parse(input);
+        }
+        catch (Exception ex) {
+            return Result<SiteConfig>.Error($"Failed to parse site configuration: {ex.Message}");
+        }
+
         var baseUrl = toml?.GetString("base_url");
         var title = toml?.GetString("title");
         var description = toml?.GetString("description");
@@ -40,7 +47,8 @@ public sealed class SiteConfigParser(IModelValuesParser modelValuesParser) : ISi
              BaseUrl: verifiedBaseUrl.AbsoluteUri,
              Title: title,
              Description: description,
-             TitleSeparator: toml?.GetString("title_separator") ?? Website.DefaultTitleSeparator));
+             TitleSeparator: toml?.GetString("title_separator") ?? Website.DefaultTitleSeparator,
+             Data: toml?.AsDictionary() ?? new Dictionary<string, object>()));
     }
 }
 
@@ -48,7 +56,7 @@ public interface ISiteConfigLoader {
     Task<Result<SiteConfig, ResultErrors>> Load();
 }
 
-public sealed class SiteConfigLoader(string basePath, ISiteConfigParser SiteConfigParser) : ISiteConfigLoader {
+public sealed class SiteConfigLoader(string basePath) : ISiteConfigLoader {
     public async Task<Result<SiteConfig, ResultErrors>> Load() {
         var siteConfigPath = Path.Join(basePath, Website.SiteConfigFileName);
 
