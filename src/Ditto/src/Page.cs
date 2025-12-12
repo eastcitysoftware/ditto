@@ -2,29 +2,23 @@ using System.Text;
 
 namespace Ditto;
 
-public record PageInfo(
-    string Path,
-    string Url,
-    string Title,
-    string Description,
-    string[] Tags,
-    IDictionary<string, object> Data);
-
 public sealed record Page(
     string Path,
+    string Slug,
     string Url,
     string? PageTitle,
     string Title,
     string Description,
     string[] Tags,
+    DateTime? Published,
     IDictionary<string, object> Data,
-    View View) : PageInfo(Path, Url, Title, Description, Tags, Data);
+    View View);
 
 public interface IPageParser {
     Task<Page> Parse(TextReader input, PageFile pageFile);
 }
 
-public sealed class PageParser(IModelValuesParser modelValuesParser, SiteConfig siteConfig) : IPageParser {
+public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
     public async Task<Page> Parse(TextReader input, PageFile pageFile) {
         var line = await input.ReadLineAsync();
 
@@ -41,14 +35,23 @@ public sealed class PageParser(IModelValuesParser modelValuesParser, SiteConfig 
 
         var pageTitle = frontMatter?.GetString("title");
 
+        var additionalData = frontMatter?.AsDictionary() ?? new Dictionary<string, object>();
+        additionalData.Remove("title");
+        additionalData.Remove("description");
+        additionalData.Remove("tags");
+        additionalData.Remove("published");
+        additionalData.Remove("layout");
+
         return new(
             Path: pageFile.Path,
+            Slug: pageFile.PageName,
             Url: UrlHelper.Combine(siteConfig.BaseUrl, pageFile.Path),
             PageTitle: pageTitle,
             Title: GetTitle(pageTitle),
             Description: frontMatter?.GetString("description") ?? siteConfig.Description,
             Tags: frontMatter?.GetStringArray("tags") ?? [],
-            Data: frontMatter?.AsDictionary() ?? new Dictionary<string, object>(),
+            Published: frontMatter?.GetDateTime("published"),
+            Data: additionalData,
             View: new(pageFile.PageName, template, pageFile.ViewType, GetLayoutName(frontMatter)));
     }
 
@@ -62,7 +65,7 @@ public sealed class PageParser(IModelValuesParser modelValuesParser, SiteConfig 
             ? string.Concat(titleValue, siteConfig.TitleSeparator, siteConfig.Title)
             : siteConfig.Title;
 
-    private async Task<ModelValues?> ExtractFrontMatter(TextReader input) {
+    private static async Task<ModelValues?> ExtractFrontMatter(TextReader input) {
         using var frontMatterStr = new StringWriter();
         string? line;
         while ((line = await input.ReadLineAsync()) is not null) {
@@ -75,7 +78,7 @@ public sealed class PageParser(IModelValuesParser modelValuesParser, SiteConfig 
 
         using var ms = new MemoryStream(Encoding.UTF8.GetBytes(frontMatterStr.ToString()));
 
-        return await modelValuesParser.Parse(ms);
+        return await ModelValuesParser.Parse(ms);
     }
 }
 
