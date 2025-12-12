@@ -9,10 +9,6 @@ public sealed record SiteConfig(
     string TitleSeparator,
     IDictionary<string, object> Data);
 
-public interface ISiteConfigParser {
-    Task<Result<SiteConfig, ResultErrors>> Parse(Stream input);
-}
-
 public static class SiteConfigParser {
     public static async Task<Result<SiteConfig, ResultErrors>> Parse(Stream input) {
         ModelValues? toml = default;
