@@ -54,7 +54,7 @@ public sealed class PageFileLoader(string basePath, string outputPath) : IPageFi
 internal static class PageFileHelper {
     internal static string GetPageName(string basePath, string filePath) {
         var pageName = "index";
-        if (Path.GetRelativePath(basePath, filePath) is string relativePath
+        if (GetRelativePath(basePath, filePath) is string relativePath
             && !Equals(relativePath, "index.html")
             && !Equals(relativePath, filePath)) {
             // strip extension, replace backslashes with forward slashes and
@@ -80,4 +80,12 @@ internal static class PageFileHelper {
             ? ViewType.Markdown
             : ViewType.Html;
 
+    private static string? GetRelativePath(string basePath, string filePath) {
+        // we define our own method here to avoid issues with Path.GetRelativePath
+        // on different platforms
+        if (filePath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase)) {
+            return filePath[basePath.Length..].TrimStart('/', '\\');
+        }
+        return default;
+    }
 }
