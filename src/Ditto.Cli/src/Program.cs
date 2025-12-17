@@ -46,7 +46,15 @@ public static class Program {
 
             Console.WriteLine($"Generating website {(hotReload ? "using hot-reload": "")} from '{basePath}' to '{outputPath}'...");
             var generateWebsite = new GenerateWebsiteCommand(basePath, outputPath, hotReload);
-            await generateWebsite.Execute();
+
+            try {
+                await generateWebsite.Execute();
+            }
+            catch (Exception ex) {
+                Console.WriteLine("An error occurred while generating the website:\n");
+                Console.WriteLine(ex.ToString());
+                throw;
+            }
         });
 
         command.Parse(args).Invoke();

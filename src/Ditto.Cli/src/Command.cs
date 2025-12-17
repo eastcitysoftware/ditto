@@ -26,7 +26,8 @@ internal sealed class GenerateWebsiteCommand(string basePath, string outputPath,
 
             Console.WriteLine("Press ESC to stop watching for file changes...");
             watcher.Start(() => {
-                if (Console.KeyAvailable
+                if (!Console.IsInputRedirected
+                    && Console.KeyAvailable
                     && Console.ReadKey(true).Key == ConsoleKey.Escape) {
                     Console.WriteLine("Stopping file watcher...");
                     return false;
