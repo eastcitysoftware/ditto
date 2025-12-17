@@ -25,7 +25,8 @@ public static class PageCollectionFactory {
         }
 
         foreach (var kvp in pageDict) {
-            yield return new(kvp.Key, kvp.Value.AsReadOnly());
+            // sort the pages alpha by path (to support date-based filenames)
+            yield return new(kvp.Key, [.. kvp.Value.OrderBy(x => x.Path)]);
         }
     }
 }

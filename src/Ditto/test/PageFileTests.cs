@@ -53,8 +53,8 @@ public sealed class PageFileHelperTests {
     [Theory]
     [InlineData("about.md", ViewType.Markdown)]
     [InlineData("contact.html", ViewType.Html)]
+    [InlineData("post", ViewType.Html)]
     public void GetViewType_ReturnsExpectedViewType(string fileName, ViewType expectedViewType) {
-        var viewType = PageFileHelper.GetViewType(fileName);
-        Assert.Equal(expectedViewType, viewType);
+        Assert.Equal(expectedViewType, PageFileHelper.GetViewType(fileName));
     }
 }
