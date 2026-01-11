@@ -1,3 +1,4 @@
+using CsToml.Error;
 using Danom;
 
 namespace Ditto;
@@ -11,17 +12,19 @@ public sealed record SiteConfig(
 
 public static class SiteConfigParser {
     public static async Task<Result<SiteConfig, ResultErrors>> Parse(Stream input) {
-        ModelValues? toml = default;
-        try {
-            toml = await ModelValuesParser.Parse(input);
-        }
-        catch (Exception ex) {
-            return Result<SiteConfig>.Error($"Failed to parse site configuration: {ex.Message}");
+        var tomlResult = await ModelValuesParser.Parse(input);
+
+        if (tomlResult.TryGetError(out var tomlError)) {
+            return Result<SiteConfig>.Error(tomlError);
         }
 
-        var baseUrl = toml?.GetString("base_url");
-        var title = toml?.GetString("title");
-        var description = toml?.GetString("description");
+        if (!tomlResult.TryGet(out var toml)) {
+            return Result<SiteConfig>.Error("Site configuration failure: Could not parse.");
+        }
+
+        var baseUrl = toml.GetString("base_url");
+        var title = toml.GetString("title");
+        var description = toml.GetString("description");
 
         if (string.IsNullOrWhiteSpace(baseUrl)) {
             return Result<SiteConfig>.Error("Site configuration is missing required field: base_url.");
@@ -43,8 +46,8 @@ public static class SiteConfigParser {
              BaseUrl: verifiedBaseUrl.AbsoluteUri,
              Title: title,
              Description: description,
-             TitleSeparator: toml?.GetString("title_separator") ?? Website.DefaultTitleSeparator,
-             Data: toml?.AsDictionary() ?? new Dictionary<string, object>()));
+             TitleSeparator: toml.GetString("title_separator") ?? Website.DefaultTitleSeparator,
+             Data: toml.AsDictionary() ?? new Dictionary<string, object>()));
     }
 }
 

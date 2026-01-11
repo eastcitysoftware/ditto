@@ -43,11 +43,27 @@ public sealed class WebsiteGenerator(
         // parse pages
         var pageTasks = pageFiles.Select(async pageFile => {
             using var input = new StreamReader(pageFile.InputPath);
+            // using var stream = new FileStream(pageFile.InputPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite & FileShare.Delete);
+            // using var input = new StreamReader(stream);
             var page = await pageParser.Parse(input, pageFile);
-            return (page, pageFile.OutputPath);
+            return (page, pageFile.InputPath, pageFile.OutputPath);
         });
 
-        var pages = await Task.WhenAll(pageTasks);
+        var pageResults = await Task.WhenAll(pageTasks);
+
+        var pageList = new List<(Page page, string outputPath)>();
+        var continuationErrors = new ResultErrors();
+
+        foreach(var (page, inputPath, pageOutputPath) in pageResults) {
+            if (page.TryGet(out var p)) {
+                pageList.Add((p, pageOutputPath));
+            }
+            else if (page.TryGetError(out var e) && e is ResultErrors errors) {
+                continuationErrors.Add(Path.GetRelativePath(sourcePath, inputPath), errors.SelectMany(x => x.Errors));
+            }
+        }
+
+        var pages = pageList;//await Task.WhenAll(pageTasks);
 
         var pageCollections = PageCollectionFactory.Create(pages.Select(x => x.page));
 
@@ -90,6 +106,11 @@ public sealed class WebsiteGenerator(
         });
 
         await Task.WhenAll(pageRenderTasks);
+
+        if (continuationErrors.Any()) {
+            return Result.Error(continuationErrors);
+        }
+
         return Result.Ok();
     }
 }

@@ -1,17 +1,24 @@
 using System.Numerics;
 using CsToml;
+using CsToml.Error;
+using Danom;
 
 namespace Ditto;
 
 public static class ModelValuesParser {
-    public static async Task<ModelValues?> Parse(Stream input) {
-        var toml = await CsTomlSerializer.DeserializeAsync<TomlDocument>(input);
+    public static async Task<Result<ModelValues, ResultErrors>> Parse(Stream input) {
+        try {
+            var toml = await CsTomlSerializer.DeserializeAsync<TomlDocument>(input);
 
-        if (toml is null) {
-            return default;
+            if (toml is null) {
+                return Result<ModelValues>.Error("TOML document is empty or invalid.");
+            }
+
+            return Result<ModelValues>.Ok(new(toml));
         }
-
-        return new ModelValues(toml);
+        catch (CsTomlSerializeException) {
+            return Result<ModelValues>.Error("Detected invalid TOML format.");
+        }
     }
 }
 

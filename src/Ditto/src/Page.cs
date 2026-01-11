@@ -1,4 +1,6 @@
 using System.Text;
+using CsToml.Error;
+using Danom;
 
 namespace Ditto;
 
@@ -15,22 +17,34 @@ public sealed record Page(
     View View);
 
 public interface IPageParser {
-    Task<Page> Parse(TextReader input, PageFile pageFile);
+    Task<Result<Page, ResultErrors>> Parse(TextReader input, PageFile pageFile);
 }
 
 public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
-    public async Task<Page> Parse(TextReader input, PageFile pageFile) {
+    public async Task<Result<Page, ResultErrors>> Parse(TextReader input, PageFile pageFile) {
         var line = await input.ReadLineAsync();
 
         ModelValues? frontMatter = default;
-        string? template;
+        string? template = default;
 
         if (line is not null && line.StartsWith("---")) {
-            frontMatter = await ExtractFrontMatter(input);
-            template = await input.ReadToEndAsync();
+            var frontMatterResult = await ExtractFrontMatter(input);
+
+            if (frontMatterResult.TryGetError(out var e)) {
+                return Result<Page>.Error(e);
+            }
+
+            if (frontMatterResult.TryGet(out var fm)) {
+                frontMatter = fm;
+                template = await input.ReadToEndAsync();
+            }
         }
         else {
             template = string.Concat(line, Environment.NewLine, await input.ReadToEndAsync());
+        }
+
+        if (template is null) {
+            return Result<Page>.Error("Failed to read page template.");
         }
 
         var pageTitle = frontMatter?.GetString("title");
@@ -42,7 +56,7 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
         additionalData.Remove("published");
         additionalData.Remove("layout");
 
-        return new(
+        return Result<Page>.Ok(new(
             Path: pageFile.Path,
             Slug: pageFile.PageName,
             Url: UrlHelper.Combine(siteConfig.BaseUrl, pageFile.Path),
@@ -52,7 +66,7 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
             Tags: frontMatter?.GetStringArray("tags") ?? [],
             Published: frontMatter?.GetDateTime("published"),
             Data: additionalData,
-            View: new(pageFile.PageName, template, pageFile.ViewType, GetLayoutName(frontMatter)));
+            View: new(pageFile.PageName, template, pageFile.ViewType, GetLayoutName(frontMatter))));
     }
 
     private static string GetLayoutName(ModelValues? frontMatter) =>
@@ -65,7 +79,7 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
             ? string.Concat(titleValue, siteConfig.TitleSeparator, siteConfig.Title)
             : siteConfig.Title;
 
-    private static async Task<ModelValues?> ExtractFrontMatter(TextReader input) {
+    private static async Task<Result<ModelValues, ResultErrors>> ExtractFrontMatter(TextReader input) {
         using var frontMatterStr = new StringWriter();
         string? line;
         while ((line = await input.ReadLineAsync()) is not null) {
@@ -78,7 +92,17 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
 
         using var ms = new MemoryStream(Encoding.UTF8.GetBytes(frontMatterStr.ToString()));
 
-        return await ModelValuesParser.Parse(ms);
+        var tomlResult = await ModelValuesParser.Parse(ms);
+
+        if (tomlResult.TryGetError(out var tomlError)) {
+            return Result<ModelValues>.Error(tomlError);
+        }
+
+        if (tomlResult.TryGet(out var modelValues)) {
+            return Result<ModelValues>.Ok(modelValues);
+        }
+
+        return Result<ModelValues>.Error("Failed to parse front matter.");
     }
 }
 

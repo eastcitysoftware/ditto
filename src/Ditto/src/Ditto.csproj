@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="CsToml" Version="1.*" />
-        <PackageReference Include="Danom" Version="2.0.0-beta*" />
+        <PackageReference Include="Danom" Version="2.*" />
         <PackageReference Include="Markdig" Version="0.*" />
         <PackageReference Include="Scriban" Version="6.*" />
         <InternalsVisibleTo Include="Ditto.Tests" />

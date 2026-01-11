@@ -26,7 +26,12 @@ public sealed class PageParserTests {
             ViewType: ViewType.Html);
 
         using var input = new StringReader(pageContent);
-        var page = await _pageParser.Parse(input, pageFile);
+        var pageResult = await _pageParser.Parse(input, pageFile);
+
+        if(!pageResult.TryGet(out var page)) {
+            Assert.Fail("Page parsing failed with errors");
+            return;
+        }
 
         Assert.Equal(pageFile.Path, page.Path);
         Assert.Equal(pageFile.PageName, page.Slug);
@@ -81,8 +86,13 @@ public sealed class PageParserTests {
             ViewType: ViewType.Html);
 
         using var input = new StringReader(pageContent);
-        var page = await _pageParser.Parse(input, pageFile);
 
+        var pageResult = await _pageParser.Parse(input, pageFile);
+
+        if(!pageResult.TryGet(out var page)) {
+            Assert.Fail("Page parsing failed with errors");
+            return;
+        }
 
         Assert.Equal(pageFile.Path, page.Path);
         Assert.Equal($"{Shared.SiteConfig.BaseUrl}{page.Path}", page.Url);
@@ -128,7 +138,13 @@ public sealed class PageParserTests {
             ViewType: ViewType.Html);
 
         var input = new StringReader(pageContent);
-        var page = await _pageParser.Parse(input, pageFile);
+
+        var pageResult = await _pageParser.Parse(input, pageFile);
+
+        if(!pageResult.TryGet(out var page)) {
+            Assert.Fail("Page parsing failed with errors");
+            return;
+        }
 
         Assert.Equal(pageFile.Path, page.Path);
         Assert.Equal($"{Shared.SiteConfig.BaseUrl}{page.Path}", page.Url);

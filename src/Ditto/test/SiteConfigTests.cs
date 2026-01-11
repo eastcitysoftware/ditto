@@ -11,7 +11,7 @@ public sealed class SiteConfigTests {
             description = 'This is an example site.'
             title_separator = '{Website.DefaultTitleSeparator}'
             contact_email = 'info@eastcitysoftware.com'
-        """;
+            """;
 
         using var file = new MemoryStream(Encoding.UTF8.GetBytes(toml));
         var config = await SiteConfigParser.Parse(file);

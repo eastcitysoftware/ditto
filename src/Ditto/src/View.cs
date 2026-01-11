@@ -177,6 +177,7 @@ public sealed class ViewLoader(string basePath) : IViewLoader {
                 }
 
                 var content = await File.ReadAllTextAsync(filePath);
+
                 return new View(viewName, content, ViewType.Html);
             });
 
