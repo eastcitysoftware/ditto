@@ -29,7 +29,7 @@ public sealed class DevelopmentHttpServer : IDisposable {
                 var context = await _listener.GetContextAsync();
                 ProcessRequest(context);
             }
-            catch (HttpListenerException) {
+            catch (Exception ex) when (ex is HttpListenerException || ex is ObjectDisposedException) {
                 // Listener was stopped, exit gracefully
                 break;
             }
