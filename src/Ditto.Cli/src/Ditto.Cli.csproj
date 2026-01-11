@@ -10,9 +10,10 @@
 
     <ItemGroup>
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta*" />
+        <InternalsVisibleTo Include="Ditto.Cli.Tests" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Ditto\src\Ditto.csproj" />
+        <ProjectReference Include="..\..\Ditto\src\Ditto.csproj" />
     </ItemGroup>
 </Project>

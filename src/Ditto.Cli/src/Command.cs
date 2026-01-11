@@ -2,7 +2,12 @@ using Danom;
 
 namespace Ditto.Cli;
 
-internal sealed class GenerateWebsiteCommand(string basePath, string outputPath, bool hotReload) {
+internal sealed class GenerateWebsiteCommand(
+    string basePath,
+    string outputPath,
+    bool watchEnabled,
+    bool serverEnabled,
+    int port) {
     public async Task Execute() {
         var siteConfigLoader = new SiteConfigLoader(basePath);
         var viewLoader = new ViewLoader(basePath);
@@ -14,27 +19,38 @@ internal sealed class GenerateWebsiteCommand(string basePath, string outputPath,
             viewLoader,
             pageFileLoader);
 
-        if (hotReload) {
-            using var watcher = new WebsiteFileWatcher(basePath);
+        DevelopmentHttpServer? httpServer = default;
+
+        if (serverEnabled) {
+            var prefix = $"http://localhost:{port}/";
+            httpServer = new DevelopmentHttpServer(prefix, outputPath);
+            httpServer.Start();
+        }
+
+        if (watchEnabled) {
+            using var watcher = new FileWatcher(basePath, [".md", ".html", ".toml"]);
             watcher.OnChangedAsync += async relativePath => {
-                Console.WriteLine($"File change detected: {relativePath}");
+                Print.Info($"File change detected: {relativePath.Path}");
                 await GenerateWebsite(
                     siteConfigLoader,
                     viewLoader,
                     pageFileLoader);
             };
 
-            Console.WriteLine("Press ESC to stop watching for file changes...");
+            Print.Info("Press ESC to stop watching for file changes...");
             watcher.Start(() => {
                 if (!Console.IsInputRedirected
                     && Console.KeyAvailable
                     && Console.ReadKey(true).Key == ConsoleKey.Escape) {
-                    Console.WriteLine("Stopping file watcher...");
+                    Print.Info("Stopping file watcher...");
                     return false;
                 }
                 return true;
             });
         }
+
+        httpServer?.Stop();
+        httpServer?.Dispose();
     }
 
     private async Task GenerateWebsite(
@@ -44,9 +60,9 @@ internal sealed class GenerateWebsiteCommand(string basePath, string outputPath,
         var siteConfigResult = await siteConfigLoader.Load();
 
         if (siteConfigResult.TryGetError(out var e) && e is ResultErrors errors) {
-            Console.WriteLine("Failed to load site configuration:");
+            Print.Error("Failed to load site configuration:");
             foreach (var error in errors) {
-                Console.WriteLine($"  * Error: {error}");
+                Print.Error($"  * Error: {error}");
             }
             return;
         }
@@ -69,11 +85,11 @@ internal sealed class GenerateWebsiteCommand(string basePath, string outputPath,
 
         sw.Stop();
         result.Match(
-            ok: _ => Console.WriteLine($"Website generated successfully, took {sw}."),
+            ok: _ => Print.Info($"Website generated successfully, took {sw}."),
             error: errors => {
-                Console.WriteLine("Errors occurred during website generation:");
+                Print.Error("Errors occurred during website generation:");
                 foreach (var error in errors) {
-                    Console.WriteLine($"  * Error: {error}");
+                    Print.Error($"  * Error: {error}");
                 }
             });
     }

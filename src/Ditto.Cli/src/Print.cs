@@ -1,6 +1,6 @@
 namespace Ditto.Cli;
 
-internal static class Print {
+public static class Print {
     public static void Error(string message) {
         WriteColoredMessage("ERROR", ConsoleColor.Red);
         Console.Write(" ");
