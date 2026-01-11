@@ -60,7 +60,7 @@ public sealed class SiteConfigLoader(string basePath) : ISiteConfigLoader {
         var siteConfigPath = Path.Join(basePath, Website.SiteConfigFileName);
 
         if (!File.Exists(siteConfigPath)) {
-            return default;
+            return Result<SiteConfig>.Error($"Site configuration file not found at path: {siteConfigPath}");
         }
 
         using var reader = File.OpenRead(siteConfigPath);
