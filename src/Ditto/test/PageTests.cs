@@ -168,14 +168,12 @@ public sealed class PageParserTests {
 public sealed class UrlHelperTests {
     [Theory]
     [InlineData("https://example.com", "/about/", "https://example.com/about/")]
-    [InlineData("https://example.com/", "/about/", "https://example.com/about/")]
     [InlineData("https://example.com", "about/", "https://example.com/about/")]
-    [InlineData("https://example.com/", "about/", "https://example.com/about/")]
     [InlineData("https://example.com/base", "/about/", "https://example.com/base/about/")]
-    [InlineData("https://example.com/base/", "/about/", "https://example.com/base/about/")]
     [InlineData("https://example.com/base", "about/", "https://example.com/base/about/")]
-    [InlineData("https://example.com/base/", "about/", "https://example.com/base/about/")]
     public void Combine_WorksAsExpected(string baseUrl, string relativePath, string expected) {
+        // our baseurl is always expected to not have a trailing slash, this
+        // is handled by the SiteConfig parser
         var result = PageParser.UrlHelper.Combine(baseUrl, relativePath);
         Assert.Equal(expected, result);
     }

@@ -22,7 +22,7 @@ public interface IPageParser {
 
 public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
     public async Task<Result<Page, ResultErrors>> Parse(TextReader input, PageFile pageFile) {
-        var line = await input.ReadLineAsync();
+        var line = await input.ReadLineAsync().ConfigureAwait(false);
 
         ModelValues? frontMatter = default;
         string? template = default;
@@ -36,11 +36,11 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
 
             if (frontMatterResult.TryGet(out var fm)) {
                 frontMatter = fm;
-                template = await input.ReadToEndAsync();
+                template = await input.ReadToEndAsync().ConfigureAwait(false);
             }
         }
         else {
-            template = string.Concat(line, Environment.NewLine, await input.ReadToEndAsync());
+            template = string.Concat(line, Environment.NewLine, await input.ReadToEndAsync().ConfigureAwait(false));
         }
 
         if (template is null) {
@@ -75,14 +75,14 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
             : Website.DefaultLayoutName;
 
     private string GetTitle(string? pageTitle) =>
-        pageTitle is string titleValue && !string.IsNullOrWhiteSpace(titleValue)
-            ? string.Concat(titleValue, siteConfig.TitleSeparator, siteConfig.Title)
+        !string.IsNullOrWhiteSpace(pageTitle)
+            ? $"{pageTitle}{siteConfig.TitleSeparator}{siteConfig.Title}"
             : siteConfig.Title;
 
     private static async Task<Result<ModelValues, ResultErrors>> ExtractFrontMatter(TextReader input) {
         using var frontMatterStr = new StringWriter();
         string? line;
-        while ((line = await input.ReadLineAsync()) is not null) {
+        while ((line = await input.ReadLineAsync().ConfigureAwait(false)) is not null) {
             if (line.StartsWith("---")) {
                 // reached end of front matter
                 break;
@@ -107,13 +107,18 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
 
     internal static class UrlHelper {
         internal static string Combine(string baseUrl, string relativePath) {
-            if (string.IsNullOrEmpty(baseUrl)) return relativePath;
-            if (string.IsNullOrEmpty(relativePath)) return baseUrl;
+            if (string.IsNullOrEmpty(baseUrl)) {
+                return relativePath;
+            }
+
+            if (string.IsNullOrEmpty(relativePath)) {
+                return baseUrl;
+            }
 
             return string.Concat(
-                baseUrl.TrimEnd('/'),
+                baseUrl,
                 "/",
-                relativePath.Trim('/'),
+                relativePath.EndsWith('/') ? relativePath.Trim('/') : relativePath,
                 "/");
         }
     }

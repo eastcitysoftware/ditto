@@ -26,7 +26,7 @@ public static class SiteConfigParser {
             return Result<SiteConfig>.Error("Site configuration failure: Could not parse.");
         }
 
-        var baseUrl = toml.GetString("base_url");
+        var baseUrl = toml.GetString("base_url")?.TrimEnd('/');
         var title = toml.GetString("title");
         var description = toml.GetString("description");
 
