@@ -14,7 +14,7 @@ internal sealed class GenerateWebsiteCommand(
         var pageFileLoader = new PageFileLoader(basePath, outputPath);
 
         // generate website once, then watch for changes if hotReload is enabled
-        await GenerateWebsite(
+        await BuildWebsite(
             siteConfigLoader,
             viewLoader,
             pageFileLoader);
@@ -31,7 +31,7 @@ internal sealed class GenerateWebsiteCommand(
             using var watcher = new FileWatcher(basePath, [".md", ".html", ".toml"]);
             watcher.OnChangedAsync += async relativePath => {
                 Print.Info($"File change detected: {relativePath.Path}");
-                await GenerateWebsite(
+                await BuildWebsite(
                     siteConfigLoader,
                     viewLoader,
                     pageFileLoader);
@@ -53,7 +53,7 @@ internal sealed class GenerateWebsiteCommand(
         httpServer?.Dispose();
     }
 
-    private async Task GenerateWebsite(
+    private async Task BuildWebsite(
         SiteConfigLoader siteConfigLoader,
         ViewLoader viewLoader,
         PageFileLoader pageFileLoader) {

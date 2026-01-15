@@ -10,6 +10,10 @@ public sealed record SiteConfig(
     string TitleSeparator,
     IDictionary<string, object> Data);
 
+public interface ISiteConfigLoader {
+    Task<Result<SiteConfig, ResultErrors>> Load();
+}
+
 public static class SiteConfigParser {
     public static async Task<Result<SiteConfig, ResultErrors>> Parse(Stream input) {
         var tomlResult = await ModelValuesParser.Parse(input);
@@ -49,10 +53,6 @@ public static class SiteConfigParser {
              TitleSeparator: toml.GetString("title_separator") ?? Website.DefaultTitleSeparator,
              Data: toml.AsDictionary() ?? new Dictionary<string, object>()));
     }
-}
-
-public interface ISiteConfigLoader {
-    Task<Result<SiteConfig, ResultErrors>> Load();
 }
 
 public sealed class SiteConfigLoader(string basePath) : ISiteConfigLoader {

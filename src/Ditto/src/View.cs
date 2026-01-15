@@ -5,6 +5,29 @@ using Scriban.Runtime;
 
 namespace Ditto;
 
+public enum ViewType {
+    Html,
+    Markdown
+}
+
+public sealed record View(
+    string Name,
+    string Content,
+    ViewType Type,
+    string LayoutName = Website.DefaultLayoutName);
+
+public sealed class ViewCollection() {
+    private readonly Dictionary<string, View> _views = [];
+
+    public ViewCollection(Dictionary<string, View> views) : this() =>
+        _views = views;
+
+    public IReadOnlyList<string> Names => [.. _views.Keys.Select(x => x)];
+
+    public View? Get(string name) =>
+        _views.TryGetValue(name, out var content) ? content : null;
+}
+
 public interface IViewEngine {
     ValueTask<string> Render(Page page, SiteConfig siteConfig, IEnumerable<PageCollection> collections);
 }
@@ -87,7 +110,7 @@ public sealed class ViewEngine(
 
     private static ScriptObject CreateCollectionsModel(IEnumerable<PageCollection> collections) {
         var collectionsModel = new ScriptObject();
-        foreach(var collection in collections) {
+        foreach (var collection in collections) {
             var pageModels = collection.Pages.Select(CreatePageModel);
             collectionsModel.Add(collection.Name, pageModels);
         }
@@ -196,26 +219,3 @@ public sealed class MarkdownProcessor : IViewProcessor {
             ? ValueTask.FromResult(view)
             : ValueTask.FromResult(view with { Content = Markdown.ToHtml(view.Content) });
 }
-
-public sealed class ViewCollection() {
-    private readonly Dictionary<string, View> _views = [];
-
-    public ViewCollection(Dictionary<string, View> views) : this() =>
-        _views = views;
-
-    public IReadOnlyList<string> Names => [.. _views.Keys.Select(x => x)];
-
-    public View? Get(string name) =>
-        _views.TryGetValue(name, out var content) ? content : null;
-}
-
-public enum ViewType {
-    Html,
-    Markdown
-}
-
-public sealed record View(
-    string Name,
-    string Content,
-    ViewType Type,
-    string LayoutName = Website.DefaultLayoutName);
