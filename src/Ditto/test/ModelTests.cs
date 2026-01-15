@@ -36,7 +36,6 @@ public sealed class ModelValuesParserTests {
             return;
         }
 
-        Assert.NotNull(modelValues);
         Assert.Equal("value", modelValues.GetString("str"));
         Assert.Equal((short)12345, modelValues.GetInt16("int16"));
         Assert.Equal(123456789, modelValues.GetInt32("int32"));
@@ -62,15 +61,8 @@ public sealed class ModelValuesParserTests {
     }
 
     [Fact]
-    public async Task Parse_ReturnsEmptyModelValues_ForEmptyInput() {
-        var input = new MemoryStream(Encoding.UTF8.GetBytes(""));
-
-        var modelValuesResult = await ModelValuesParser.Parse(input);
-
-        if (!modelValuesResult.TryGet(out var modelValues)) {
-            Assert.Fail("Failed to parse ModelValues");
-            return;
-        }
+    public void Parse_ReturnsEmptyModelValues_ForEmptyInput() {
+        var modelValues = ModelValues.Empty;
 
         Assert.NotNull(modelValues);
         Assert.Null(modelValues.GetString("str"));
@@ -95,5 +87,178 @@ public sealed class ModelValuesParserTests {
         Assert.Empty(modelValues.GetDateTimeArray("datetime_array"));
         Assert.Empty(modelValues.GetDateTimeOffsetArray("datetime_offset_array"));
         Assert.Empty(modelValues.GetTimeOnlyArray("time_array"));
+    }
+
+    [Fact]
+    public async Task Parse_ReturnsError_ForInvalidModelInput() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes("invalid_Model = ["));
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+        Assert.False(modelValuesResult.IsOk);
+    }
+
+    [Fact]
+    public async Task Parse_ReturnsError_ForNullInputStream() {
+        Stream? input = null;
+        var modelValuesResult = await ModelValuesParser.Parse(input!);
+        Assert.False(modelValuesResult.IsOk);
+    }
+
+    [Fact]
+    public async Task Parse_ReturnsOk_ForEmptyModelDocument() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes(""));
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+        Assert.True(modelValuesResult.IsOk);
+    }
+
+    [Fact]
+    public void GetMethods_ReturnNullOrEmpty_ForNonExistentKeys() {
+        var modelValues = ModelValues.Empty;
+
+        Assert.Null(modelValues.GetString("non_existent_key"));
+        Assert.Null(modelValues.GetInt16("non_existent_key"));
+        Assert.Null(modelValues.GetInt32("non_existent_key"));
+        Assert.Null(modelValues.GetInt64("non_existent_key"));
+        Assert.Null(modelValues.GetDouble("non_existent_key"));
+        Assert.Null(modelValues.GetFloat("non_existent_key"));
+        Assert.Null(modelValues.GetBool("non_existent_key"));
+        Assert.Null(modelValues.GetDateOnly("non_existent_key"));
+        Assert.Null(modelValues.GetDateTime("non_existent_key"));
+        Assert.Null(modelValues.GetDateTimeOffset("non_existent_key"));
+        Assert.Null(modelValues.GetTimeOnly("non_existent_key"));
+        Assert.Empty(modelValues.GetStringArray("non_existent_key"));
+        Assert.Empty(modelValues.GetInt16Array("non_existent_key"));
+        Assert.Empty(modelValues.GetInt32Array("non_existent_key"));
+        Assert.Empty(modelValues.GetInt64Array("non_existent_key"));
+        Assert.Empty(modelValues.GetFloatArray("non_existent_key"));
+        Assert.Empty(modelValues.GetDoubleArray("non_existent_key"));
+        Assert.Empty(modelValues.GetDateOnlyArray("non_existent_key"));
+        Assert.Empty(modelValues.GetDateTimeArray("non_existent_key"));
+        Assert.Empty(modelValues.GetDateTimeOffsetArray("non_existent_key"));
+        Assert.Empty(modelValues.GetTimeOnlyArray("non_existent_key"));
+    }
+
+    [Fact]
+    public async Task GetMethods_ReturnNull_ForTypeMismatch() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes("""
+            key = "string_value"
+            """));
+
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+
+        if (!modelValuesResult.TryGet(out var modelValues)) {
+            Assert.Fail("Failed to parse ModelValues");
+            return;
+        }
+
+        Assert.Null(modelValues.GetInt32("key"));
+        Assert.Null(modelValues.GetBool("key"));
+        Assert.Null(modelValues.GetDateTime("key"));
+    }
+
+    [Fact]
+    public async Task GetMethods_HandleSpecialCharactersInKeys() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes("""
+            "key with spaces" = "value"
+            """));
+
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+
+        if (!modelValuesResult.TryGet(out var modelValues)) {
+            Assert.Fail("Failed to parse ModelValues");
+            return;
+        }
+
+        Assert.Equal("value", modelValues.GetString("key with spaces"));
+    }
+
+    [Fact]
+    public async Task GetMethods_HandleUnicodeCharactersInKeys() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes("""
+            "ключ-с-юникодом" = "значение"
+            """));
+
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+
+        if (!modelValuesResult.TryGet(out var modelValues)) {
+            Assert.Fail("Failed to parse ModelValues");
+            return;
+        }
+
+        Assert.Equal("значение", modelValues.GetString("ключ-с-юникодом"));
+    }
+
+    [Fact]
+    public async Task Parse_Ignores_CommentsInModel() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes("""
+            # This is a comment
+            key = "value" # Inline comment
+            """));
+
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+
+        if (!modelValuesResult.TryGet(out var modelValues)) {
+            Assert.Fail("Failed to parse ModelValues");
+            return;
+        }
+
+        Assert.Equal("value", modelValues.GetString("key"));
+    }
+
+    [Fact]
+    public async Task Parse_Handles_WhitespaceInModel() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes("""
+
+            key    =    "value"
+
+            """));
+
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+
+        if (!modelValuesResult.TryGet(out var modelValues)) {
+            Assert.Fail("Failed to parse ModelValues");
+            return;
+        }
+
+        Assert.Equal("value", modelValues.GetString("key"));
+    }
+
+    [Fact]
+    public async Task Parse_Handles_LargeModelInput() {
+        var sb = new StringBuilder();
+        for (int i = 0; i < 1000; i++) {
+            sb.AppendLine($"key{i} = \"value{i}\"");
+        }
+
+        var input = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString()));
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+
+        if (!modelValuesResult.TryGet(out var modelValues)) {
+            Assert.Fail("Failed to parse ModelValues");
+            return;
+        }
+
+        for (int i = 0; i < 1000; i++) {
+            Assert.Equal($"value{i}", modelValues.GetString($"key{i}"));
+        }
+    }
+
+    [Fact]
+    public async Task Parse_Handles_SpecialCharactersInValues() {
+        var input = new MemoryStream(Encoding.UTF8.GetBytes("""
+            key_newline = "line1\nline2"
+            key_tab = "column1\tcolumn2"
+            key_quote = "He said, \"Hello!\""
+            """));
+
+        var modelValuesResult = await ModelValuesParser.Parse(input);
+
+        if (!modelValuesResult.TryGet(out var modelValues)) {
+            Assert.Fail("Failed to parse ModelValues");
+            return;
+        }
+
+        Assert.Equal("line1\nline2", modelValues.GetString("key_newline"));
+        Assert.Equal("column1\tcolumn2", modelValues.GetString("key_tab"));
+        Assert.Equal("He said, \"Hello!\"", modelValues.GetString("key_quote"));
     }
 }

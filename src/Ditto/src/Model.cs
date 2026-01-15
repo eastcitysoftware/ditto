@@ -1,19 +1,23 @@
 using System.Numerics;
 using CsToml;
 using CsToml.Error;
+using CsToml.Values;
 using Danom;
 
 namespace Ditto;
 
-public static class ModelValuesParser {
-    public static async Task<Result<ModelValues, ResultErrors>> Parse(Stream input) {
+internal static class ModelValuesParser {
+    internal static async Task<Result<ModelValues, ResultErrors>> Parse(Stream input) {
+        if (input is null) {
+            return Result<ModelValues>.Error("Input stream is null.");
+        }
+
         try {
             var toml = await CsTomlSerializer.DeserializeAsync<TomlDocument>(input);
 
             if (toml is null) {
                 return Result<ModelValues>.Error("TOML document is empty or invalid.");
             }
-
             return Result<ModelValues>.Ok(new(toml));
         }
         catch (CsTomlSerializeException) {
@@ -22,82 +26,90 @@ public static class ModelValuesParser {
     }
 }
 
-public sealed class ModelValues {
-    private readonly TomlDocument _toml;
+internal sealed class ModelValues(TomlDocument toml) {
+    private readonly TomlDocument _toml = toml;
 
-    internal ModelValues(TomlDocument toml) {
-        _toml = toml;
-    }
+    internal static ModelValues Empty { get; } = new(new TomlDocument());
 
-    public IDictionary<string, object> AsDictionary() =>
+    internal IDictionary<string, object> AsDictionary() =>
         _toml.ToDictionary<string, object>();
 
-    public string? GetString(string name) =>
-        _toml.RootNode[name].TryGetString(out var x) ? x : null;
+    internal string? GetString(string name) =>
+        _toml.RootNode[name].TryGetString(out var value) ? value : null;
 
-    public short? GetInt16(string name) =>
-        GetNumber<short>(name);
+    internal short? GetInt16(string name) =>
+        TryGetNumber<short>(name, out var value) ? value : null;
 
-    public int? GetInt32(string name) =>
-        GetNumber<int>(name);
+    internal int? GetInt32(string name) =>
+        TryGetNumber<int>(name, out var value) ? value : null;
 
-    public long? GetInt64(string name) =>
-        _toml.RootNode[name].TryGetInt64(out var x) ? x : null;
+    internal long? GetInt64(string name) =>
+        TryGetNumber<long>(name, out var value) ? value : null;
 
-    public double? GetDouble(string name) =>
-        _toml.RootNode[name].TryGetDouble(out var x) ? x : null;
+    internal double? GetDouble(string name) =>
+        TryGetNumber<double>(name, out var value) ? value : null;
 
-    public float? GetFloat(string name) =>
-        GetNumber<float>(name);
+    internal float? GetFloat(string name) =>
+        TryGetNumber<float>(name, out var value) ? value : null;
 
-    public bool? GetBool(string name) =>
-        _toml.RootNode[name].TryGetBool(out var x) ? x : null;
+    internal bool? GetBool(string name) =>
+        _toml.RootNode[name].TryGetBool(out var value) ? value : null;
 
-    public DateTime? GetDateTime(string name) =>
-        _toml.RootNode[name].TryGetDateTime(out var x) ? x : null;
+    internal DateTime? GetDateTime(string name) =>
+        _toml.RootNode[name].TryGetDateTime(out var value) ? value : null;
 
-    public DateTimeOffset? GetDateTimeOffset(string name) =>
-        _toml.RootNode[name].TryGetDateTimeOffset(out var x) ? x : null;
+    internal DateTimeOffset? GetDateTimeOffset(string name) =>
+        _toml.RootNode[name].TryGetDateTimeOffset(out var value) ? value : null;
 
-    public DateOnly? GetDateOnly(string name) =>
-        _toml.RootNode[name].TryGetDateOnly(out var x) ? x : null;
+    internal DateOnly? GetDateOnly(string name) =>
+        _toml.RootNode[name].TryGetDateOnly(out var value) ? value : null;
 
-    public TimeOnly? GetTimeOnly(string name) =>
-        _toml.RootNode[name].TryGetTimeOnly(out var x) ? x : null;
+    internal TimeOnly? GetTimeOnly(string name) =>
+        _toml.RootNode[name].TryGetTimeOnly(out var value) ? value : null;
 
-    public object? GetObject(string name) =>
-        _toml.RootNode[name].TryGetObject(out var x) ? x : null;
+    internal object? GetObject(string name) =>
+        _toml.RootNode[name].TryGetObject(out var value) ? value : null;
 
-    private T? GetNumber<T>(string name) where T : struct, INumberBase<T> =>
-        _toml.RootNode[name].TryGetNumber<T>(out var x) ? x : null;
+    internal string[] GetStringArray(string name) =>
+        TryGetArray(name, x => x.GetString(), out var value) ? value : [];
 
-    public string[] GetStringArray(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetString())] : [];
+    internal short[] GetInt16Array(string name) =>
+        TryGetArray(name, x => x.GetNumber<short>(), out var value) ? value : [];
 
-    public short[] GetInt16Array(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetNumber<short>())] : [];
+    internal int[] GetInt32Array(string name) =>
+        TryGetArray(name, x => x.GetNumber<int>(), out var value) ? value : [];
 
-    public int[] GetInt32Array(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetNumber<int>())] : [];
+    internal long[] GetInt64Array(string name) =>
+        TryGetArray(name, x => x.GetNumber<long>(), out var value) ? value : [];
 
-    public long[] GetInt64Array(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetNumber<long>())] : [];
+    internal float[] GetFloatArray(string name) =>
+        TryGetArray(name, x => x.GetNumber<float>(), out var value) ? value : [];
 
-    public float[] GetFloatArray(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetNumber<float>())] : [];
+    internal double[] GetDoubleArray(string name) =>
+        TryGetArray(name, x => x.GetNumber<double>(), out var value) ? value : [];
 
-    public double[] GetDoubleArray(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetNumber<double>())] : [];
+    internal DateOnly[] GetDateOnlyArray(string name) =>
+        TryGetArray(name, x => x.GetDateOnly(), out var value) ? value : [];
 
-    public DateOnly[] GetDateOnlyArray(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetDateOnly())] : [];
+    internal DateTime[] GetDateTimeArray(string name) =>
+        TryGetArray(name, x => x.GetDateTime(), out var value) ? value : [];
 
-    public DateTime[] GetDateTimeArray(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetDateTime())] : [];
+    internal DateTimeOffset[] GetDateTimeOffsetArray(string name) =>
+        TryGetArray(name, x => x.GetDateTimeOffset(), out var value) ? value : [];
 
-    public DateTimeOffset[] GetDateTimeOffsetArray(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetDateTimeOffset())] : [];
+    internal TimeOnly[] GetTimeOnlyArray(string name) =>
+        TryGetArray(name, x => x.GetTimeOnly(), out var value) ? value : [];
 
-    public TimeOnly[] GetTimeOnlyArray(string name) =>
-        _toml.RootNode[name].TryGetArray(out var x) ? [.. x.Select(x => x.GetTimeOnly())] : [];
+    private bool TryGetArray<T>(string name, Func<TomlValue, T> converter, out T[] value) {
+        if (_toml.RootNode[name].TryGetArray(out var x)) {
+            value = [.. x.Select(converter)];
+            return true;
+        }
+        value = [];
+        return false;
+    }
+
+    private bool TryGetNumber<T>(string name, out T value) where T : struct, INumberBase<T> =>
+        _toml.RootNode[name].TryGetNumber(out value);
+
 }
