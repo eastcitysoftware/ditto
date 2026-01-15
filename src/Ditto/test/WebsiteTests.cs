@@ -146,6 +146,6 @@ public sealed class PathHelperTests {
     [InlineData("/usr", true)]
     [InlineData("/var", true)]
     public void IsSystemPath_ReturnsExpected(string filePath, bool expected) {
-        Assert.Equal(expected, PathHelper.IsSystemPath(filePath));
+        Assert.Equal(expected, WebsiteGenerator.PathHelper.IsSystemPath(filePath));
     }
 }

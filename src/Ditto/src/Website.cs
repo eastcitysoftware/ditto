@@ -51,19 +51,17 @@ public sealed class WebsiteGenerator(
 
         var pageResults = await Task.WhenAll(pageTasks);
 
-        var pageList = new List<(Page page, string outputPath)>();
+        var pages = new List<(Page page, string outputPath)>();
         var continuationErrors = new ResultErrors();
 
-        foreach(var (page, inputPath, pageOutputPath) in pageResults) {
+        foreach (var (page, inputPath, pageOutputPath) in pageResults) {
             if (page.TryGet(out var p)) {
-                pageList.Add((p, pageOutputPath));
+                pages.Add((p, pageOutputPath));
             }
             else if (page.TryGetError(out var e) && e is ResultErrors errors) {
                 continuationErrors.Add(Path.GetRelativePath(sourcePath, inputPath), errors.SelectMany(x => x.Errors));
             }
         }
-
-        var pages = pageList;//await Task.WhenAll(pageTasks);
 
         var pageCollections = PageCollectionFactory.Create(pages.Select(x => x.page));
 
@@ -113,17 +111,17 @@ public sealed class WebsiteGenerator(
 
         return Result.Ok();
     }
-}
 
-internal static class PathHelper {
-    internal static readonly HashSet<string> _systemPaths = [
-        // Common Windows system directory
-        @"C:\Windows", @"C:\Windows\System32", @"C:\Program Files", @"C:\Program Files (x86)",
-        "C:/Windows", "C:/Windows/System32", "C:/Program Files", "C:/Program Files (x86)",
-        // Common Linux/macOS system directories
-        "/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/proc", "/root", "/sbin", "/sys", "/usr", "/var"
-    ];
+    internal static class PathHelper {
+        internal static readonly HashSet<string> _systemPaths = [
+            // Common Windows system directory
+            @"C:\Windows", @"C:\Windows\System32", @"C:\Program Files", @"C:\Program Files (x86)",
+            "C:/Windows", "C:/Windows/System32", "C:/Program Files", "C:/Program Files (x86)",
+            // Common Linux/macOS system directories
+            "/bin", "/boot", "/dev", "/etc", "/lib", "/lib64", "/proc", "/root", "/sbin", "/sys", "/usr", "/var"
+        ];
 
-    internal static bool IsSystemPath(string pathToTest) =>
-        _systemPaths.Any(path => string.Equals(path, pathToTest, StringComparison.OrdinalIgnoreCase));
+        public static bool IsSystemPath(string pathToTest) =>
+            _systemPaths.Any(path => string.Equals(path, pathToTest, StringComparison.OrdinalIgnoreCase));
+    }
 }

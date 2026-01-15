@@ -42,50 +42,50 @@ public sealed class PageFileLoader(string basePath, string outputPath) : IPageFi
             pages.Add(new(
                 InputPath: filePath,
                 OutputPath: outputFilePath,
-                Path: PageFileHelper.GetPath(basePath, filePath),
-                PageName: PageFileHelper.GetPageName(basePath, filePath),
-                ViewType: PageFileHelper.GetViewType(filePath)));
+                Path: FileHelper.GetPath(basePath, filePath),
+                PageName: FileHelper.GetPageName(basePath, filePath),
+                ViewType: FileHelper.GetViewType(filePath)));
         }
 
         return pages;
     }
-}
 
-internal static class PageFileHelper {
-    internal static string GetPageName(string basePath, string filePath) {
-        var pageName = "index";
-        if (GetRelativePath(basePath, filePath) is string relativePath
-            && !Equals(relativePath, "index.html")
-            && !Equals(relativePath, filePath)) {
-            // strip extension, replace backslashes with forward slashes and
-            // prepend + append forward slashes
-            pageName = relativePath[..^Path.GetExtension(relativePath).Length].Replace("\\", "/");
+    internal static class FileHelper {
+        internal static string GetPageName(string basePath, string filePath) {
+            var pageName = "index";
+            if (GetRelativePath(basePath, filePath) is string relativePath
+                && !Equals(relativePath, "index.html")
+                && !Equals(relativePath, filePath)) {
+                // strip extension, replace backslashes with forward slashes and
+                // prepend + append forward slashes
+                pageName = relativePath[..^Path.GetExtension(relativePath).Length].Replace("\\", "/");
+            }
+            return pageName;
         }
-        return pageName;
-    }
 
-    internal static string GetPath(string basePath, string filePath) {
-        var path = "/";
-        if (GetPageName(basePath, filePath) is string pageName
-            && !Equals("index", pageName)) {
-            // strip extension, replace backslashes with forward slashes and
-            // prepend + append forward slashes
-            path = string.Concat("/", pageName, "/");
+        internal static string GetPath(string basePath, string filePath) {
+            var path = "/";
+            if (GetPageName(basePath, filePath) is string pageName
+                && !Equals("index", pageName)) {
+                // strip extension, replace backslashes with forward slashes and
+                // prepend + append forward slashes
+                path = string.Concat("/", pageName, "/");
+            }
+            return path;
         }
-        return path;
-    }
 
-    internal static ViewType GetViewType(string filePath) =>
-        string.Equals(Path.GetExtension(filePath), ".md", StringComparison.OrdinalIgnoreCase)
-            ? ViewType.Markdown
-            : ViewType.Html;
+        internal static ViewType GetViewType(string filePath) =>
+            string.Equals(Path.GetExtension(filePath), ".md", StringComparison.OrdinalIgnoreCase)
+                ? ViewType.Markdown
+                : ViewType.Html;
 
-    private static string? GetRelativePath(string basePath, string filePath) {
-        // we define our own method here to avoid issues with Path.GetRelativePath
-        // on different platforms
-        if (filePath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase)) {
-            return filePath[basePath.Length..].TrimStart('/', '\\');
+        private static string? GetRelativePath(string basePath, string filePath) {
+            // we define our own method here to avoid issues with Path.GetRelativePath
+            // on different platforms
+            if (filePath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase)) {
+                return filePath[basePath.Length..].TrimStart('/', '\\');
+            }
+            return default;
         }
-        return default;
     }
 }

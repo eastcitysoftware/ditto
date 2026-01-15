@@ -104,17 +104,17 @@ public sealed class PageParser(SiteConfig siteConfig) : IPageParser {
 
         return Result<ModelValues>.Error("Failed to parse front matter.");
     }
-}
 
-internal static class UrlHelper {
-    internal static string Combine(string baseUrl, string relativePath) {
-        if (string.IsNullOrEmpty(baseUrl)) return relativePath;
-        if (string.IsNullOrEmpty(relativePath)) return baseUrl;
+    internal static class UrlHelper {
+        internal static string Combine(string baseUrl, string relativePath) {
+            if (string.IsNullOrEmpty(baseUrl)) return relativePath;
+            if (string.IsNullOrEmpty(relativePath)) return baseUrl;
 
-        return string.Concat(
-            baseUrl.TrimEnd('/'),
-            "/",
-            relativePath.Trim('/'),
-            "/");
+            return string.Concat(
+                baseUrl.TrimEnd('/'),
+                "/",
+                relativePath.Trim('/'),
+                "/");
+        }
     }
 }
