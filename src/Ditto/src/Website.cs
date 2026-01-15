@@ -29,9 +29,7 @@ public sealed class WebsiteGenerator(
             return Result.Error("Output path cannot be a system directory.");
         }
 
-        if (!Directory.Exists(outputPath)) {
-            Directory.CreateDirectory(outputPath);
-        }
+        Directory.CreateDirectory(outputPath);
 
         // load page files
         var pageFiles = pageFileLoader.LoadFiles();
@@ -40,19 +38,61 @@ public sealed class WebsiteGenerator(
             return Result.Error($"No page files found in the source directory '{sourcePath}'.");
         }
 
+        var continuationErrors = new ResultErrors();
+
+        // delete any index.html files that aren't in the source
+        var pageOutputPathIndex =
+            new HashSet<string>(
+                pageFiles.Select(x => x.OutputPath),
+                StringComparer.OrdinalIgnoreCase);
+
+        var filesToDelete = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(outputPath, "index.html", SearchOption.AllDirectories)) {
+            var fullPath = Path.GetFullPath(file);
+            if (!pageOutputPathIndex.Contains(fullPath)) {
+                filesToDelete.Add(fullPath);
+            }
+        }
+
+        Parallel.ForEach(filesToDelete, file => {
+            try {
+                File.Delete(file);
+            }
+            catch (Exception ex) {
+                continuationErrors.Add(Path.GetRelativePath(sourcePath, file), $"Failed to delete file '{file}': {ex.Message}");
+            }
+        });
+
+        // delete any empty directories
+        var directoriesToDelete = new List<string>();
+        foreach (var dir in Directory.GetDirectories(outputPath, "*", SearchOption.AllDirectories).OrderByDescending(x => x.Length)) {
+            if (!Directory.EnumerateFileSystemEntries(dir).Any()) {
+                directoriesToDelete.Add(dir);
+            }
+        }
+
+        Parallel.ForEach(directoriesToDelete, x => {
+            try {
+                Directory.Delete(x);
+            }
+            catch (Exception ex) {
+                continuationErrors.Add(Path.GetRelativePath(sourcePath, x), $"Failed to delete directory '{x}': {ex.Message}");
+            }
+        });
+
         // parse pages
         var pageTasks = pageFiles.Select(async pageFile => {
             using var input = new StreamReader(pageFile.InputPath);
             // using var stream = new FileStream(pageFile.InputPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite & FileShare.Delete);
             // using var input = new StreamReader(stream);
-            var page = await pageParser.Parse(input, pageFile);
+            var page = await pageParser.Parse(input, pageFile).ConfigureAwait(false);
             return (page, pageFile.InputPath, pageFile.OutputPath);
         });
 
         var pageResults = await Task.WhenAll(pageTasks);
 
         var pages = new List<(Page page, string outputPath)>();
-        var continuationErrors = new ResultErrors();
 
         foreach (var (page, inputPath, pageOutputPath) in pageResults) {
             if (page.TryGet(out var p)) {
@@ -65,39 +105,19 @@ public sealed class WebsiteGenerator(
 
         var pageCollections = PageCollectionFactory.Create(pages.Select(x => x.page));
 
-        // delete any index.html files that aren't in the source
-        var pageOutputPathIndex =
-            new HashSet<string>(
-                pageFiles.Select(x => x.OutputPath),
-                StringComparer.OrdinalIgnoreCase);
-
-        foreach (var file in Directory.EnumerateFiles(outputPath, "index.html", SearchOption.AllDirectories)) {
-            var fullPath = Path.GetFullPath(file);
-            if (!pageOutputPathIndex.Contains(fullPath)) {
-                File.Delete(fullPath);
-            }
-        }
-
-        // delete any empty directories
-        foreach (var dir in Directory.GetDirectories(outputPath, "*", SearchOption.AllDirectories).OrderByDescending(x => x.Length)) {
-            if (!Directory.EnumerateFileSystemEntries(dir).Any()) {
-                Directory.Delete(dir, false);
-            }
-        }
-
         // render pages
         var pageRenderTasks = pages.Select(async pageTuple => {
             var (page, outputPath) = pageTuple;
             var outputDir = Path.GetDirectoryName(outputPath);
 
-            if (outputDir is not null && !Directory.Exists(outputDir)) {
+            if (outputDir is not null) {
                 Directory.CreateDirectory(outputDir);
             }
 
             var renderedContent = await viewEngine.Render(
                 page: page,
                 siteConfig: siteConfig,
-                collections: pageCollections);
+                collections: pageCollections).ConfigureAwait(false);
 
             using var writer = new StreamWriter(outputPath);
             await writer.WriteAsync(renderedContent);
