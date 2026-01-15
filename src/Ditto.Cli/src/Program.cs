@@ -30,12 +30,12 @@ public static class Program {
 
         var portOption =
             new Option<int>("port", ["--port", "-p"]) {
-                Description = "Set the port for the built-in web server (default: 8080)",
+                Description = "Set the port for the built-in web server",
                 DefaultValueFactory = _ => 8080
             };
 
         var command = new RootCommand(
-            description: "ditto, static webite generator with hot reload") {
+            description: "ditto, static site generator with powerful scripting, hot reload, and a built-in dev server") {
             inputArgument,
             outputOption,
             watchOption,
