@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta*" />
+        <PackageReference Include="System.CommandLine" Version="2.*" />
         <InternalsVisibleTo Include="Ditto.Cli.Tests" />
     </ItemGroup>
 
