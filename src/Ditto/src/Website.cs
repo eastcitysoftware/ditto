@@ -103,6 +103,7 @@ public sealed class WebsiteGenerator(
             }
         }
 
+        // create page collections
         var pageCollections = PageCollectionFactory.Create(pages.Select(x => x.page));
 
         // render pages
