@@ -5,25 +5,22 @@
 [![build](https://github.com/eastcitysoftware/ditto/actions/workflows/build.yml/badge.svg)](https://github.com/eastcitysoftware/ditto/actions/workflows/build.yml)
 ![License](https://img.shields.io/github/license/eastcitysoftware/ditto)
 
-Built-in _powerful_ scripting language, hot reload and dev server.
 </div>
 
----
-
-Ditto is a static website generator with powerful scripting capabilities, hot reload functionality, and a built-in development server. It leverages the [TOML](https://github.com/prozolic/CsToml) format for configuration and the [Scriban](https://github.com/scriban/scriban) templating engine for dynamic content generation, making it easy to create localized, _page-driven_ websites.
+Ditto is a static website generator that makes it easy to create _page-driven_ websites. It comes packed with powerful scripting capabilities, hot reload, and a built-in development server. It uses [TOML](https://github.com/prozolic/CsToml) for configuration and [Scriban](https://github.com/scriban/scriban) as a scripting language for dynamic content generation.
 
 ---
 
 ## Features
 
 - **Powerful Scripting**: Utilize Scriban to create dynamic and customizable website content.
+- **Easy Configuration**: Use the easy-to-read TOML format for configuring your website settings.
 - **Hot Reload**: Automatically regenerate your website when changes are detected in the source files.
-- **Built-in Dev Server**: Preview your website locally with a built-in web server that supports live reloading.
-- **TOML Configuration**: Use the easy-to-read TOML format for configuring your website settings.
+- **Built-in Dev Server**: Preview your website locally with the built-in web server.
 
 ## Installation
 
-??
+_TBD_
 
 Once the CLI is installed, you can use the `ditto` command in your terminal. Below is the output for the `ditto --help` command:
 
@@ -136,14 +133,17 @@ Below is an example of a simple layout:
 </html>
 ```
 
-Layouts have access to the [same variables as pages](#pages), but commonly include:
-- `title`: The title of the current page.
-- `content`: The rendered content of the current page.
-- `description`: The description of the current page.
+Layouts can include partials and have access to the [same variables as pages](#pages), but most commonly include:
+
+| Variable      | Description                                      |
+|---------------|--------------------------------------------------|
+| `title` | The title of the current page. |
+| `content` | The rendered content of the current page. |
+| `description` | The description of the current page. |
 
 ### Partials
 
-Partials are reusable snippets of HTML that can be included in multiple layouts or pages. They are stored in the `_partials/` directory and included in a template using the `include` function. They are accessible in both layouts and pages.
+Partials are reusable chunks of HTML that can be included in multiple layouts or pages. They are stored in the `_partials/` directory and included in a template using the `include` function. They are accessible in both layouts and pages.
 
 For example, our layout above could be modified to include header and footer partials:
 
@@ -176,7 +176,7 @@ For example, our layout above could be modified to include header and footer par
 </html>
 ```
 
-Partials also have access to the [same variables as pages](#pages), but they can also accept input parameters and assign local variables if needed.
+Partials also have access to the [same variables as pages](#pages), and they can also accept input parameters and assign local variables if needed.
 
 Passing arguments is done positionally after the partial name:
 
@@ -206,9 +206,9 @@ If the partial is within a subdirectory of `_partials/`, use a forward slash to 
 
 Pages are the main content files of your website. They can be written in HTML or Markdown and are stored in the `src/` directory or its subdirectories. Markdown files should have a `.md` extension, while HTML files should have a `.html` extension.
 
-> Pages can also _optionally_ include a front matter block at the top of the file for metadata.
+> Pages can _optionally_ include a front matter block at the top of the file for metadata.
 
-Pages have access to several built-in variables:
+Pages have access to several built-in variables and can also contain [script](#scripting) blocks:
 
 | Variable      | Description                                      |
 |---------------|--------------------------------------------------|
@@ -335,7 +335,7 @@ description = "A list of all blog posts."
 
 ## Scripting
 
-Scriban is a powerful templating language used in Ditto for dynamic content generation. Below is a concise overview of Scriban's syntax and features.
+Scriban is a powerful scripting language. It is used in Ditto for dynamic (precompiled) content generation. Below is a rapid overview of Scriban's scripting syntax and features.
 
 For a complete reference, please visit the [Scriban Language Documentation](https://github.com/scriban/scriban/tree/master/doc).
 
