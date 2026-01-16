@@ -196,6 +196,12 @@ These are accessible in the partial as `$1`, `$2`, etc.
 
 > Note how new script blocks are delimited with `{{` and `}}`. In the script block above we assign the passed arguments to local variables `arg1` and `arg2` for easier access.
 
+If the partial is within a subdirectory of `_partials/`, use a forward slash to denote the path:
+
+```html
+{{ include "subdir/partial_name" arg1 arg2 }}
+```
+
 ### Pages
 
 Pages are the main content files of your website. They can be written in HTML or Markdown and are stored in the `src/` directory or its subdirectories. Markdown files should have a `.md` extension, while HTML files should have a `.html` extension.
@@ -298,7 +304,7 @@ description = "A list of all blog posts."
 
 ## Scripting
 
-Scriban is a powerful templating language used in Ditto for dynamic content generation. Below is a concise overview of Scriban's syntax and features, inspired by "learnxinyminutes.com" style guides.
+Scriban is a powerful templating language used in Ditto for dynamic content generation. Below is a concise overview of Scriban's syntax and features.
 
 For a complete reference, please visit the [Scriban Language Documentation](https://github.com/scriban/scriban/tree/master/doc).
 
@@ -373,8 +379,6 @@ For a complete reference, please visit the [Scriban Language Documentation](http
 - Logical: `&&`, `||`, `!`
 
 ### **Built-in Functions**
-
-Below is a comprehensive list of Scriban's built-in functions, organized by category. Each function is presented in a two-column table for clarity, followed by examples of commonly used functions.
 
 #### Array Functions
 
