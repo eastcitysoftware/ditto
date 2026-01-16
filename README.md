@@ -268,6 +268,37 @@ published = "2024-06-02"
 <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Facere cum, officia neque eveniet iure ipsa ab dolore magnam deleniti quos dignissimos. Facilis soluta quo ut fuga illum, magnam cum aspernatur.</p>
 ```
 
+#### Page Data
+
+In addition to the built-in variables, pages can also define custom metadata using front matter. This metadata is accessible via the `data` variable. For example, if a page has the following front matter:
+
+```html
+---
+title = "Custom Page"
+author = "John Doe"
+category = "Tutorial"
+options = ["option1", "option2"]
+urls = [{name="Home", link="/home"}, {name="About", link="/about"}]
+---
+<p>Author: {{data.author}}</p>
+<p>Category: {{data.category}}</p>
+
+<p>Options:</p>
+<ul>
+{{for option in data.options}}
+    <li>{{option}}</li>
+{{end}}
+</ul>
+
+<p>Links:</p>
+<nav>
+{{for url in data.urls}}
+    <a href="{{url.link}}">{{url.name}}</a>
+{{end}}
+</nav>
+
+```
+
 ### Page Collections
 
 Page collections are groups of pages stored in subdirectories within the `src/` directory. Collections are derived from the first segment of a page's URL and are used to organize pages into logical groups, such as blog posts or sections of a website.
